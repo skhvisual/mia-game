@@ -1741,7 +1741,7 @@ class MainScene extends Phaser.Scene {
         };
 
         // Счётчики
-        this.scoreText = this.add.text(24, 18, 'Очки: 0', { fontSize: '24px', fill: '#FFF', fontStyle: 'bold' });
+        this.scoreText = this.add.text(Math.max(24, 12), Math.max(18, this.GH * 0.04), 'Очки: 0', { fontSize: '24px', fill: '#FFF', fontStyle: 'bold' });
         this.scoreText.setShadow(2, 2, '#000', 4);
 
         // Відображення життів (на canvas)
@@ -1750,7 +1750,7 @@ class MainScene extends Phaser.Scene {
         this.livesText.setShadow(2, 2, '#000', 4);
         this.updateLivesDisplay();
 
-        this.superJumpText = this.add.text(24, 50, 'Суперстрибок: 0', { fontSize: '18px', fill: '#AAFF00', fontStyle: 'bold' });
+        this.superJumpText = this.add.text(Math.max(24, 12), Math.max(50, this.GH * 0.1), 'Суперстрибок: 0', { fontSize: '18px', fill: '#AAFF00', fontStyle: 'bold' });
         this.superJumpText.setShadow(2, 2, '#000', 4);
 
         // Анимация пульсации всей области суперпрыжков
@@ -2489,6 +2489,12 @@ class MainScene extends Phaser.Scene {
             this.gameOver = true;
             this.mia.setTint(0xff0000);
             this.mia.anims.stop();
+            // Очищаємо всі активні об'єкти, щоб не заважали
+            this.obstacles.clear(true, true);
+            this.collectibles.clear(true, true);
+            this.birds.clear(true, true);
+            this.superItems.clear(true, true);
+            this.rainItems.clear(true, true);
             this.playBuffer('finalSound', 0.7);
             if (currentPlayer) submitScore(this.score);
 
@@ -2509,7 +2515,7 @@ class MainScene extends Phaser.Scene {
             const bg = this.add.rectangle(this.GW / 2, this.GH / 2, Math.min(640, this.GW - 40), Math.min(280, this.GH - 60), 0x000000, 0.85);
             bg.setOrigin(0.5);
 
-            const startY = 90;
+            const startY = Math.max(60, this.GH * 0.1);
             let lineY = startY;
             const centerX = this.GW / 2;
 
