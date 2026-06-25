@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Пригоди Мії</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: none;
+            display: none;
+        }
+
+        /* ── ЗАГАЛЬНІ КАРТКИ ── */
+        .card {
+            width: min(440px, 92vw);
+            padding: 32px 28px 24px;
+            border: 2px solid rgba(0, 255, 255, 0.8);
+            border-radius: 22px;
+            background: rgba(5, 5, 20, 0.92);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.35), 0 0 70px rgba(255, 0, 255, 0.28);
+            text-align: center;
+            color: white;
+        }
+        .card h1 {
+            margin: 0 0 4px;
+            font-size: 36px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card .subtitle {
+            margin: 0 0 22px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        .card label {
+            display: block;
+            text-align: left;
+            color: #00ffff;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        .card input {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0 0 12px;
+            padding: 14px 16px;
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 12px;
+            background: #09091f;
+            color: #fff;
+            font-size: 18px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .card input:focus {
+            border-color: #ff00ff;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            border: 0;
+            border-radius: 14px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            color: #050510;
+            font-size: 20px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+        .auth-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .auth-row .btn-primary {
+            padding: 14px;
+            font-size: 16px;
+        }
+        #auth-message {
+            min-height: 22px;
+            margin-top: 12px;
+            text-align: center;
+            color: #ffff66;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .card-footer {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.5;
+            text-align: center;
+            text-shadow:
+                0 0 5px #ff00ff,
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+            animation: neonBlink 1.5s ease-in-out infinite alternate;
+        }
+        .card-footer .neon-line {
+            display: block;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff00ff;
+            text-shadow:
+                0 0 5px #ff00ff,
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+            animation: neonBlink 1.5s ease-in-out infinite alternate;
+            padding: 4px 0;
+        }
+        .neon-footer {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff00ff;
+            text-shadow:
+                0 0 5px #ff00ff,
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+            animation: neonBlink 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes neonBlink {
+            0% {
+                opacity: 0.7;
+                text-shadow:
+                    0 0 5px #ff00ff,
+                    0 0 10px #ff00ff,
+                    0 0 20px #ff00ff,
+                    0 0 40px #00ffff;
+            }
+            50% {
+                opacity: 1;
+                text-shadow:
+                    0 0 5px #ff00ff,
+                    0 0 10px #ff00ff,
+                    0 0 20px #ff00ff,
+                    0 0 40px #00ffff,
+                    0 0 80px #00ffff,
+                    0 0 120px #ff00ff;
+            }
+            100% {
+                opacity: 0.8;
+                text-shadow:
+                    0 0 3px #ff00ff,
+                    0 0 8px #ff00ff,
+                    0 0 15px #00ffff,
+                    0 0 30px #00ffff;
+            }
+        }
+        .switch-link {
+            margin-top: 14px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .switch-link a {
+            color: #00ffff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .saved-names {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .saved-name-btn {
+            padding: 8px 18px;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            border-radius: 20px;
+            background: rgba(0, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .saved-name-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+        }
+
+        #leaderboard-panel {
+            position: fixed;
+            right: 14px;
+            top: 14px;
+            z-index: 10;
+            width: 200px;
+            max-height: 70vh;
+            padding: 12px;
+            border: 1px solid rgba(0, 255, 255, 0.7);
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.72);
+            color: #fff;
+            font-size: 13px;
+            display: none;
+            overflow: hidden;
+        }
+        #leaderboard-panel h3 {
+            margin: 0 0 8px;
+            text-align: center;
+            font-size: 14px;
+            color: #00ffff;
+        }
+        #leaderboard-list {
+            max-height: 48vh;
+            overflow-y: auto;
+            padding-left: 22px;
+            margin: 0;
+            font-size: 13px;
+        }
+        #leaderboard-list li {
+            padding: 3px 0;
+        }
+
+        #player-bar {
+            position: fixed;
+            left: 14px;
+            bottom: 14px;
+            z-index: 10;
+            display: none;
+            color: white;
+            background: rgba(0,0,0,0.66);
+            border: 1px solid rgba(255, 0, 255, 0.65);
+            border-radius: 14px;
+            padding: 6px 10px;
+            font-size: 12px;
+            min-width: 140px;
+            box-shadow: 0 0 18px rgba(255, 0, 255, 0.25);
+        }
+        #player-bar button {
+            width: 100%;
+            padding: 4px 8px;
+            margin: 4px 0 0;
+            border: 0;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            color: #050510;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #lives-display {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: none;
+            color: #ff3366;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 51, 102, 0.6), 0 0 40px rgba(255, 0, 0, 0.3);
+            letter-spacing: 6px;
+            pointer-events: none;
+        }
+
+        /* ── ЕКРАНИ ── */
+        #auth-screen, #start-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top, rgba(255, 0, 255, 0.22), rgba(0, 0, 0, 0.88));
+        }
+        #start-screen { display: none; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="error-console" style="position: absolute; top: 10px; left: 10px; color: red; font-family: monospace; font-size: 16px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; z-index: 9999; display: none; max-width: 90%; word-wrap: break-word;"></div>
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var errorConsole = document.getElementById('error-console');
+            errorConsole.style.display = 'block';
+            errorConsole.innerHTML += '<div><b>Помилка:</b> ' + msg + ' <br><b>Файл:</b> ' + url + ' (рядок ' + lineNo + ')</div><hr>';
+            return false;
+        };
+    </script>
+
+    <!-- ЕКРАН АВТОРИЗАЦІЇ (вхід/реєстрація) -->
+    <div id="auth-screen">
+        <div class="card">
+            <h1>Пригоди Мії</h1>
+            <p class="subtitle">Зареєструйся або увійди, щоб грати</p>
+            <input id="auth-name" type="text" placeholder="Ім'я гравця (тільки при реєстрації)" maxlength="24" autocomplete="nickname">
+            <input id="auth-email" type="email" placeholder="Електронна пошта" autocomplete="email">
+            <input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password">
+            <div class="auth-row">
+                <button id="login-button" class="btn-primary">Увійти</button>
+                <button id="register-button" class="btn-primary">Реєстрація</button>
+            </div>
+            <div id="auth-message"></div>
+            <div class="card-footer">
+                <span class="neon-line">Гра розроблена для Мії з міста Мирнівка</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- СТАРТОВИЙ ЕКРАН (після входу) -->
+    <div id="start-screen">
+        <div class="card">
+            <h1>Пригоди Мії</h1>
+            <p class="subtitle" id="greeting-text">Ласкаво просимо!</p>
+
+            <label for="player-name-input">Хто буде грати?</label>
+            <input id="player-name-input" type="text" placeholder="Введи ім'я гравця" maxlength="20" autocomplete="off">
+            <div id="saved-names-container" class="saved-names" style="display:none;"></div>
+            <button id="start-game-btn" class="btn-primary">Старт!</button>
+            <div style="margin-top:10px;">
+                <button id="change-player-btn" class="btn-primary" style="padding:10px; font-size:14px; background:linear-gradient(90deg,#555,#888);">Змінити гравця</button>
+            </div>
+            <div class="switch-link">
+                <a id="back-to-auth-link">Інший акаунт</a>
+            </div>
+            <div class="card-footer neon-footer">
+                Гра розроблена для Мії з міста Мирнівка
+            </div>
+        </div>
+    </div>
+
+    <div id="player-bar">
+        <div>Гравець: <b id="current-player-name">—</b></div>
+        <button id="logout-player-btn">Вийти</button>
+    </div>
+
+    <div id="leaderboard-panel">
+        <h3>Топ-10</h3>
+        <ol id="leaderboard-list"></ol>
+    </div>
+
+    <div id="lives-display">❤️ ❤️ ❤️</div>
+    <div id="game-container"></div>
+    <script src="game.js"></script>
+    <script>
+        // ── Telegram Mini App Integration ──
+        (function() {
+            const tg = window.Telegram?.WebApp;
+            if (!tg) return;
+
+            // Expand to full screen
+            tg.expand();
+
+            // Enable closing confirmation
+            tg.enableClosingConfirmation();
+
+            // Set BackButton to close
+            tg.BackButton.onClick(() => tg.close());
+
+            // Apply Telegram theme colors
+            const style = document.createElement('style');
+            style.textContent = `
+                body {
+                    background: ${tg.backgroundColor || 'linear-gradient(135deg, #1a1a2e, #0f3460)'} !important;
+                }
+                .card {
+                    background: ${tg.secondaryBackgroundColor + '22' || 'rgba(5,5,20,0.92)'} !important;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Haptic feedback on interactions
+            document.addEventListener('click', () => {
+                try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
+            });
+
+            // Show BackButton when game is active
+            const origStartGame = window.startGame;
+            const origShowAuth = window.showAuthUI;
+
+            const showBackButton = () => tg.BackButton.show();
+            const hideBackButton = () => tg.BackButton.hide();
+
+            // Expose for game.js to call
+            window.__tgBackButton = { show: showBackButton, hide: hideBackButton };
+        })();
+    </script>
+</body>
+</html>
