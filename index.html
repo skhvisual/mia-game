@@ -2,9 +2,14 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f3460">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Пригоди Мії</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🌸</text></svg>">
+    <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
     <style>
         body {
             margin: 0;
@@ -216,9 +221,9 @@
         #leaderboard-panel {
             position: fixed;
             right: 14px;
-            top: 14px;
+            top: max(14px, env(safe-area-inset-top, 14px));
             z-index: 10;
-            width: 200px;
+            width: min(200px, 30vw);
             max-height: 70vh;
             padding: 12px;
             border: 1px solid rgba(0, 255, 255, 0.7);
@@ -228,6 +233,30 @@
             font-size: 13px;
             display: none;
             overflow: hidden;
+        }
+        @media (max-width: 600px) {
+            #leaderboard-panel {
+                width: min(140px, 28vw);
+                font-size: 11px;
+                padding: 8px;
+            }
+            #leaderboard-list {
+                font-size: 11px;
+            }
+            #lives-display {
+                font-size: 22px;
+                letter-spacing: 4px;
+            }
+            #player-bar {
+                font-size: 11px;
+                min-width: 120px;
+            }
+            .card {
+                padding: 24px 20px 20px;
+            }
+            .card h1 {
+                font-size: 28px;
+            }
         }
         #leaderboard-panel h3 {
             margin: 0 0 8px;
@@ -249,7 +278,7 @@
         #player-bar {
             position: fixed;
             left: 14px;
-            bottom: 14px;
+            bottom: max(14px, env(safe-area-inset-bottom, 14px));
             z-index: 10;
             display: none;
             color: white;
@@ -276,7 +305,7 @@
 
         #lives-display {
             position: fixed;
-            top: 14px;
+            top: max(14px, env(safe-area-inset-top, 14px));
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
@@ -315,22 +344,49 @@
         };
     </script>
 
-    <!-- ЕКРАН АВТОРИЗАЦІЇ (вхід/реєстрація) -->
+    <!-- ЕКРАН АВТОРИЗАЦІЇ -->
     <div id="auth-screen">
         <div class="card">
             <h1>Пригоди Мії</h1>
-            <p class="subtitle">Зареєструйся або увійди, щоб грати</p>
-            <input id="auth-name" type="text" placeholder="Ім'я гравця (тільки при реєстрації)" maxlength="24" autocomplete="nickname">
-            <input id="auth-email" type="email" placeholder="Електронна пошта" autocomplete="email">
-            <input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password">
-            <div class="auth-row">
+
+            <!-- Крок 1: Питання — чи є акаунт -->
+            <div id="auth-question">
+                <p class="subtitle">Ласкаво просимо!</p>
+                <p style="color:#ccc;margin-bottom:20px;font-size:16px;">У вас є акаунт?</p>
+                <div class="auth-row">
+                    <button id="auth-have-account-btn" class="btn-primary">Так</button>
+                    <button id="auth-no-account-btn" class="btn-primary">Ні</button>
+                </div>
+                <div class="card-footer">
+                    <span class="neon-line">Гра розроблена для Мії з міста Мирнівка</span>
+                </div>
+            </div>
+
+            <!-- Крок 2: Форма входу -->
+            <div id="auth-login-form" style="display:none;">
+                <p class="subtitle">Увійдіть у свій акаунт</p>
+                <input id="auth-email" type="email" placeholder="Електронна пошта" autocomplete="email">
+                <input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password">
                 <button id="login-button" class="btn-primary">Увійти</button>
-                <button id="register-button" class="btn-primary">Реєстрація</button>
+                <div id="auth-message"></div>
+                <div class="switch-link">
+                    <a id="back-to-question-from-login">← Назад</a>
+                </div>
             </div>
-            <div id="auth-message"></div>
-            <div class="card-footer">
-                <span class="neon-line">Гра розроблена для Мії з міста Мирнівка</span>
+
+            <!-- Крок 3: Форма реєстрації -->
+            <div id="auth-register-form" style="display:none;">
+                <p class="subtitle">Створіть новий акаунт</p>
+                <input id="auth-name" type="text" placeholder="Ім'я гравця" maxlength="24" autocomplete="nickname">
+                <input id="auth-email2" type="email" placeholder="Електронна пошта" autocomplete="email">
+                <input id="auth-password2" type="password" placeholder="Пароль" autocomplete="new-password">
+                <button id="register-button" class="btn-primary">Зареєструватися</button>
+                <div id="auth-message-register"></div>
+                <div class="switch-link">
+                    <a id="back-to-question-from-register">← Назад</a>
+                </div>
             </div>
+
         </div>
     </div>
 
@@ -340,16 +396,24 @@
             <h1>Пригоди Мії</h1>
             <p class="subtitle" id="greeting-text">Ласкаво просимо!</p>
 
-            <label for="player-name-input">Хто буде грати?</label>
-            <input id="player-name-input" type="text" placeholder="Введи ім'я гравця" maxlength="20" autocomplete="off">
-            <div id="saved-names-container" class="saved-names" style="display:none;"></div>
-            <button id="start-game-btn" class="btn-primary">Старт!</button>
-            <div style="margin-top:10px;">
-                <button id="change-player-btn" class="btn-primary" style="padding:10px; font-size:14px; background:linear-gradient(90deg,#555,#888);">Змінити гравця</button>
+            <div id="logged-in-container">
+                <p style="color:#aaa;margin-bottom:20px;font-size:15px;">Готові до пригод?</p>
+                <button id="start-game-btn-logged" class="btn-primary">Начать гру</button>
+                <div style="margin-top:12px;">
+                    <button id="change-account-btn" class="btn-primary" style="padding:12px;font-size:14px;background:linear-gradient(90deg,#555,#888);">Змінити акаунт</button>
+                </div>
             </div>
-            <div class="switch-link">
-                <a id="back-to-auth-link">Інший акаунт</a>
+
+            <div id="guest-container" style="display:none;">
+                <label for="player-name-input">Введіть ім'я гравця</label>
+                <input id="player-name-input" type="text" placeholder="Ім'я" maxlength="20" autocomplete="off">
+                <div id="saved-names-container" class="saved-names" style="display:none;"></div>
+                <button id="start-game-btn" class="btn-primary">Старт!</button>
+                <div style="margin-top:10px;">
+                    <button id="change-player-btn" class="btn-primary" style="padding:10px;font-size:14px;background:linear-gradient(90deg,#555,#888);">Змінити гравця</button>
+                </div>
             </div>
+
             <div class="card-footer neon-footer">
                 Гра розроблена для Мії з міста Мирнівка
             </div>

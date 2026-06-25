@@ -1,0 +1,22 @@
+# Logs
+*.log
+game_log.txt
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+
+# Godini sessions (local-only data)
+.godini/
+
+# Environment
+.env
+.env.local

@@ -24,9 +24,14 @@ function renderSavedNames() {
     const names = getSavedNames();
     if (names.length === 0) { container.style.display = 'none'; return; }
     container.style.display = 'flex';
-    container.innerHTML = names.map(n =>
-        `<button class="saved-name-btn" onclick="selectSavedName('${n.replace(/'/g, "\\'")}')">${n}</button>`
-    ).join('');
+    container.innerHTML = '';
+    names.forEach(n => {
+        const btn = document.createElement('button');
+        btn.className = 'saved-name-btn';
+        btn.textContent = n;
+        btn.addEventListener('click', () => selectSavedName(n));
+        container.appendChild(btn);
+    });
 }
 
 function selectSavedName(name) {
@@ -57,6 +62,36 @@ function showAuthUI() {
     document.getElementById('leaderboard-panel').style.display = 'none';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('lives-display').style.display = 'none';
+    resetAuthForms();
+}
+
+function resetAuthForms() {
+    document.getElementById('auth-question').style.display = 'block';
+    document.getElementById('auth-login-form').style.display = 'none';
+    document.getElementById('auth-register-form').style.display = 'none';
+    document.getElementById('auth-email').value = '';
+    document.getElementById('auth-password').value = '';
+    document.getElementById('auth-name').value = '';
+    document.getElementById('auth-email2').value = '';
+    document.getElementById('auth-password2').value = '';
+    const msg = document.getElementById('auth-message');
+    if (msg) msg.textContent = '';
+    const msg2 = document.getElementById('auth-message-register');
+    if (msg2) msg2.textContent = '';
+}
+
+function showLoginForm() {
+    document.getElementById('auth-question').style.display = 'none';
+    document.getElementById('auth-login-form').style.display = 'block';
+    document.getElementById('auth-register-form').style.display = 'none';
+    document.getElementById('auth-message').textContent = '';
+}
+
+function showRegisterForm() {
+    document.getElementById('auth-question').style.display = 'none';
+    document.getElementById('auth-login-form').style.display = 'none';
+    document.getElementById('auth-register-form').style.display = 'block';
+    document.getElementById('auth-message-register').textContent = '';
 }
 
 function showStartUI() {
@@ -66,12 +101,22 @@ function showStartUI() {
     document.getElementById('leaderboard-panel').style.display = 'block';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('lives-display').style.display = 'none';
-    document.getElementById('greeting-text').textContent = 'Ласкаво просимо, ' + (currentPlayer?.name || '') + '!';
-    renderSavedNames();
-    // Автоматично підставляємо ім'я залогіненого користувача
-    const savedNames = getSavedNames();
-    if (savedNames.length > 0) {
-        document.getElementById('player-name-input').value = savedNames[0];
+
+    if (currentPlayer) {
+        // Залогинен — показываем только "Начать гру" и "Змінити акаунт"
+        document.getElementById('logged-in-container').style.display = 'block';
+        document.getElementById('guest-container').style.display = 'none';
+        document.getElementById('greeting-text').textContent = 'Ласкаво просимо, ' + (currentPlayer?.name || '') + '!';
+    } else {
+        // Гость — показываем ввод имени
+        document.getElementById('logged-in-container').style.display = 'none';
+        document.getElementById('guest-container').style.display = 'block';
+        document.getElementById('greeting-text').textContent = 'Ласкаво просимо!';
+        renderSavedNames();
+        const savedNames = getSavedNames();
+        if (savedNames.length > 0) {
+            document.getElementById('player-name-input').value = savedNames[0];
+        }
     }
 }
 
@@ -136,29 +181,28 @@ async function submitScore(score) {
 }
 
 async function registerPlayer() {
-    if (!supabaseClient) { setAuthMessage('Supabase не налаштовано'); return; }
+    if (!supabaseClient) { document.getElementById('auth-message-register').textContent = 'Supabase не налаштовано'; return; }
     const name = document.getElementById('auth-name').value.trim();
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
+    const email = document.getElementById('auth-email2').value.trim();
+    const password = document.getElementById('auth-password2').value;
 
     if (!name || !email || !password) {
-        setAuthMessage('Заповни ім\'я, email та пароль');
+        document.getElementById('auth-message-register').textContent = 'Заповни ім\'я, email та пароль';
         return;
     }
 
-    setAuthMessage('Реєструємо...');
+    document.getElementById('auth-message-register').textContent = 'Реєструємо...';
     const { data, error } = await supabaseClient.auth.signUp({ email, password });
-    if (error) { setAuthMessage(error.message); return; }
+    if (error) { document.getElementById('auth-message-register').textContent = error.message; return; }
 
     if (data.user) {
         await supabaseClient.from('profiles').upsert({ id: data.user.id, player_name: name });
         await loadPlayerProfile(data.user);
         document.getElementById('auth-name').value = '';
-        document.getElementById('auth-email').value = '';
-        document.getElementById('auth-password').value = '';
+        document.getElementById('auth-email2').value = '';
+        document.getElementById('auth-password2').value = '';
         showStartUI();
         await refreshLeaderboard();
-        setAuthMessage('');
     }
 }
 
@@ -192,6 +236,17 @@ async function logoutPlayer() {
     showAuthUI();
 }
 
+function changeAccount() {
+    if (window._game) {
+        window._game.destroy(true);
+        window._game = null;
+    }
+    currentPlayer = null;
+    gamePlayerName = '';
+    document.getElementById('player-name-input').value = '';
+    showAuthUI();
+}
+
 function changePlayer() {
     if (window._game) {
         window._game.destroy(true);
@@ -203,6 +258,27 @@ function changePlayer() {
     renderSavedNames();
 }
 
+function startGameLogged() {
+    if (currentPlayer) {
+        gamePlayerName = currentPlayer.name;
+        startGameWithName(gamePlayerName);
+    }
+}
+
+function startGameWithName(name) {
+    if (!name) return;
+    gamePlayerName = name;
+    showGameUI();
+    window._startGameWithName = name;
+    if (window._game) {
+        window._game.destroy(true);
+        window._game = null;
+    }
+    setTimeout(() => {
+        window._game = new Phaser.Game(config);
+    }, 50);
+}
+
 function startGame() {
     const name = document.getElementById('player-name-input').value.trim();
     if (!name) {
@@ -210,27 +286,37 @@ function startGame() {
         setTimeout(() => document.getElementById('player-name-input').style.borderColor = '', 1500);
         return;
     }
-    gamePlayerName = name;
     saveName(name);
-    showGameUI();
-    window._startGameWithName = name;
-    // Правильно знищуємо попередню гру перед створенням нової
-    if (window._game) {
-        window._game.destroy(true);
-        window._game = null;
-    }
-    setTimeout(() => {
-        window._game = new Phaser.Game(config);
-    }, 50); // Невелика затримка, щоб DOM встиг оновитись
+    startGameWithName(name);
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('register-button').addEventListener('click', registerPlayer);
+    // Крок 1: опрос — есть ли аккаунт
+    document.getElementById('auth-have-account-btn').addEventListener('click', showLoginForm);
+    document.getElementById('auth-no-account-btn').addEventListener('click', showRegisterForm);
+    document.getElementById('back-to-question-from-login').addEventListener('click', resetAuthForms);
+    document.getElementById('back-to-question-from-register').addEventListener('click', resetAuthForms);
+
+    // Крок 2: логин
     document.getElementById('login-button').addEventListener('click', loginPlayer);
+    document.getElementById('auth-password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loginPlayer();
+    });
+
+    // Крок 3: регистрация
+    document.getElementById('register-button').addEventListener('click', registerPlayer);
+    document.getElementById('auth-password2').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') registerPlayer();
+    });
+
+    // Выход и смена аккаунта
     document.getElementById('logout-player-btn').addEventListener('click', logoutPlayer);
-    document.getElementById('back-to-auth-link').addEventListener('click', logoutPlayer);
+    document.getElementById('change-account-btn').addEventListener('click', changeAccount);
     document.getElementById('change-player-btn').addEventListener('click', changePlayer);
+
+    // Старт игры
     document.getElementById('start-game-btn').addEventListener('click', startGame);
+    document.getElementById('start-game-btn-logged').addEventListener('click', startGameLogged);
     document.getElementById('player-name-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') startGame();
     });
@@ -1619,6 +1705,12 @@ class MainScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => { this.initAudioContext(); this.jump(); });
         this.input.keyboard.on('keydown-UP', () => { this.initAudioContext(); this.jump(); });
 
+        // Неоновое небо
+        this.bgGraphics = this.add.graphics();
+        this.bgGraphics.setDepth(-1);
+        this.bgGraphics.fillGradientStyle(0x020208, 0x020208, 0x2d0036, 0x1a0033, 1);
+        this.bgGraphics.fillRect(0, 0, this.GW, this.GH);
+
         // Обробка ресайзу для адаптивності
         this.scale.on('resize', (gameSize) => {
             this.GW = gameSize.width;
@@ -1626,19 +1718,20 @@ class MainScene extends Phaser.Scene {
             this.groundY = this.GH - 40;
             this.spawnX = this.GW + 100;
             // Оновлюємо фон та землю
-            graphics.clear();
-            graphics.fillGradientStyle(0x020208, 0x020208, 0x2d0036, 0x1a0033, 1);
-            graphics.fillRect(0, 0, this.GW, this.GH);
-            this.ground.setPosition(this.GW / 2, this.groundY + 20);
-            this.ground.body.setSize(this.GW, 40);
-            this.neonLine.setPosition(this.GW / 2, this.groundY);
-            this.neonLine.setSize(this.GW, 4);
+            if (this.bgGraphics) {
+                this.bgGraphics.clear();
+                this.bgGraphics.fillGradientStyle(0x020208, 0x020208, 0x2d0036, 0x1a0033, 1);
+                this.bgGraphics.fillRect(0, 0, this.GW, this.GH);
+            }
+            if (this.ground) {
+                this.ground.setPosition(this.GW / 2, this.groundY + 20);
+                this.ground.body.setSize(this.GW, 40);
+            }
+            if (this.neonLine) {
+                this.neonLine.setPosition(this.GW / 2, this.groundY);
+                this.neonLine.setSize(this.GW, 4);
+            }
         });
-
-        // Неоновое небо
-        const graphics = this.add.graphics();
-        graphics.fillGradientStyle(0x020208, 0x020208, 0x2d0036, 0x1a0033, 1);
-        graphics.fillRect(0, 0, this.GW, this.GH);
 
         // Облака (пушистые, с неоновым свечением)
         this.clouds = this.add.group();
@@ -1654,7 +1747,7 @@ class MainScene extends Phaser.Scene {
         let spacing = 150;
         for(let i=0; i<6; i++) {
             let x = i * spacing + Phaser.Math.Between(0, 50);
-            let tree = this.add.image(x, Math.min(380, this.GH - 20), 'tree');
+            let tree = this.add.image(x, this.groundY, 'tree');
             tree.setOrigin(0.5, 1);
             let scale = 0.6 + Math.random() * 1.0;
             tree.setScale(scale);
@@ -1670,6 +1763,10 @@ class MainScene extends Phaser.Scene {
         // Линия неона сверху земли
         this.neonLine = this.add.rectangle(this.GW / 2, this.groundY, this.GW, 4, 0x00FFFF);
         
+        // Базовый масштаб игры (для адаптивности)
+        const baseHeight = 600;
+        this.scaleFactor = Math.min(2, Math.max(1, this.GH / baseHeight));
+
         // Анимации Мии и Собаки
         if (!this.anims.exists('run')) {
             this.anims.create({
@@ -1698,18 +1795,22 @@ class MainScene extends Phaser.Scene {
             });
         }
 
-        // Игрок (Мия)
-        this.mia = this.physics.add.sprite(Math.min(150, this.GW * 0.2), this.groundY - 44, 'mia0');
-        this.mia.setScale(1.1);
+        // Игрок (Мия) - увеличиваем масштаб пропорционально экрану
+        this.mia = this.physics.add.sprite(Math.min(150, this.GW * 0.2), this.groundY - 44 * this.scaleFactor, 'mia0');
+        this.mia.setScale(1.1 * this.scaleFactor);
         this.mia.play('run');
+        this.miaReady = false;
         
-        this.mia.setGravityY(2300); 
+        // Исправляем гравитацию для всех размеров экрана
+        this.mia.setGravityY(2300 * Math.max(1, this.scaleFactor)); 
         this.mia.setCollideWorldBounds(true);
-        this.physics.add.collider(this.mia, this.ground);
+        this.physics.add.collider(this.mia, this.ground, () => {
+            this.miaReady = true;
+        });
         
-        // Хитбокс Мии (тоньше, под худую версию)
-        this.mia.body.setSize(14, 38);
-        this.mia.body.setOffset(5, 10);
+        // Хитбокс Мии (уменьшаем высоту хитбокса, чтобы не застревала при прыжке)
+        this.mia.body.setSize(14, 32);
+        this.mia.body.setOffset(5, 16);
 
         // Группы (В Phaser 3.60+ используем обычные группы, а не физические, во избежание дёргания координат)
         this.obstacles = this.add.group();
@@ -1938,14 +2039,15 @@ class MainScene extends Phaser.Scene {
     }
 
     jump() {
-        if (this.gameOver) return;
+        if (this.gameOver || !this.miaReady) return;
 
         const jumpIdx = Math.floor(Math.random() * 2) + 1;
         const onGround = this.mia.body.touching.down || this.mia.body.blocked.down;
+        const sf = this.scaleFactor || 1;
 
         if (onGround) {
             this.canUseAirSuperJump = true;
-            this.mia.setVelocityY(-720);
+            this.mia.setVelocityY(-720 * sf);
             this.playBuffer('jump' + jumpIdx, 0.6);
             return;
         }
@@ -1955,7 +2057,7 @@ class MainScene extends Phaser.Scene {
             this.superJumps -= 1;
             this.canUseAirSuperJump = false;
             this.superJumpText.setText('Суперстрибок: ' + this.superJumps);
-            this.mia.setVelocityY(-820);
+            this.mia.setVelocityY(-820 * sf);
             this.burstParticles(24, this.mia.x, this.mia.y + 18, 0xAAFF00);
             this.playBuffer('jump' + jumpIdx, 0.6);
         }
@@ -2390,6 +2492,9 @@ class MainScene extends Phaser.Scene {
                 item.destroy();
                 this.score += pts;
                 this.scoreText.setText('Очки: ' + this.score);
+                // Трекаємо супер-предмети в режимі Мрії
+                this.superItemsCollected[key] = (this.superItemsCollected[key] || 0) + 1;
+                this.updateSuperItemsText(key);
                 return;
             }
             const pts = key === 'heart' ? 25 : (key === 'flower' ? 15 : 10);
@@ -2428,14 +2533,15 @@ class MainScene extends Phaser.Scene {
     collectBird(bird) {
         const points = bird.getData('points') || 20;
         this.showFloatingScore(points, bird.x, bird.y);
-        
+
         const particleCount = points === 80 ? 28 : (points === 40 ? 18 : 10);
         this.burstParticles(particleCount, bird.x, bird.y, 0x00FFFF);
 
         bird.destroy();
         this.playBuffer('vorona', 0.7);
-        
+
         this.score += points;
+        this.totalBirds += 1;
         this.scoreText.setText('Очки: ' + this.score);
     }
 
@@ -2498,7 +2604,7 @@ class MainScene extends Phaser.Scene {
             this.playBuffer('finalSound', 0.7);
             if (currentPlayer) submitScore(this.score);
 
-            // Підрахунок зібраних супер-предметів (тільки суперстрибки)
+            // Підрахунок усіх зібраних предметів
             const collectedKeys = [];
             let totalSuperItems = 0;
             if (this.superItemsCollected) {
@@ -2511,43 +2617,135 @@ class MainScene extends Phaser.Scene {
                 });
             }
 
-            // Темний фон для напису
-            const bg = this.add.rectangle(this.GW / 2, this.GH / 2, Math.min(640, this.GW - 40), Math.min(280, this.GH - 60), 0x000000, 0.85);
-            bg.setOrigin(0.5);
-
-            const startY = Math.max(60, this.GH * 0.1);
-            let lineY = startY;
             const centerX = this.GW / 2;
+            const isPortrait = this.GH > this.GW;
+
+            // Затемнення всього екрану
+            const overlay = this.add.rectangle(centerX, this.GH / 2, this.GW, this.GH, 0x000000, 0.75);
+            overlay.setOrigin(0.5);
+            overlay.setDepth(100);
+
+            // Розраховуємо розмір панелі та позиції елементів динамічно
+            const borderPad = isPortrait ? 20 : 80;
+            const panelW = Math.min(560, this.GW - borderPad * 2);
+            const panelX = centerX;
+            const panelY = this.GH / 2;
+
+            // Починаємо з верхнього краю панелі + відступ
+            const padTop = 20;
+            let lineY = panelY - 170 + padTop;
 
             // Заголовок
-            this.add.text(centerX, lineY, 'Гра закінчилася!', {
-                fontSize: '38px', fill: '#FF3366', fontStyle: 'bold'
-            }).setOrigin(0.5).setShadow(3, 3, '#000', 6);
-            lineY += 50;
+            const titleText = this.add.text(panelX, lineY, 'Гра закінчилася!', {
+                fontSize: isPortrait ? '24px' : '32px',
+                fill: '#FF3366',
+                fontStyle: 'bold',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5).setShadow(3, 3, '#000', 6).setDepth(103);
+            lineY += 32;
+
+            // Ім'я гравця
+            this.add.text(panelX, lineY, this.playerName, {
+                fontSize: '14px',
+                fill: '#AAAAAA',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5).setDepth(103);
+            lineY += 24;
 
             // Іконки супер-предметів з кількістю
+            const iconSize = 30;
+            const maxIconsPerRow = isPortrait ? 3 : 5;
+            const iconRows = [];
             if (collectedKeys.length > 0) {
-                const iconStartX = centerX - (collectedKeys.length * 50) / 2;
+                const rowCount = Math.ceil(collectedKeys.length / maxIconsPerRow);
                 collectedKeys.forEach((item, i) => {
-                    const ix = iconStartX + i * 50;
-                    const icon = this.add.image(ix, lineY + 8, item.key).setScale(0.55);
-                    this.add.text(ix + 14, lineY - 4, 'x' + item.count, {
-                        fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold'
-                    }).setShadow(1, 1, '#000', 3);
+                    const currentRow = Math.floor(i / maxIconsPerRow);
+                    const totalInRow = Math.min(maxIconsPerRow, collectedKeys.length - currentRow * maxIconsPerRow);
+                    const rowStartX = panelX - (totalInRow * iconSize) / 2;
+                    const col = i % maxIconsPerRow;
+                    const ix = rowStartX + col * iconSize + iconSize / 2;
+                    const iy = lineY + currentRow * 26;
+
+                    this.add.image(ix, iy, item.key).setScale(0.4).setDepth(103);
+                    this.add.text(ix + 10, iy - 4, 'x' + item.count, {
+                        fontSize: '12px',
+                        fill: '#FFFFFF',
+                        fontStyle: 'bold'
+                    }).setOrigin(0, 0.5).setShadow(1, 1, '#000', 3).setDepth(103);
+
+                    if (!iconRows[currentRow]) iconRows[currentRow] = 0;
+                    iconRows[currentRow]++;
                 });
-                lineY += 46;
+                lineY += iconRows.length * 26 + 4;
             }
 
             // Очки
-            this.add.text(centerX, lineY, 'Очки: ' + this.score, {
-                fontSize: '30px', fill: '#00FFFF', fontStyle: 'bold'
-            }).setOrigin(0.5).setShadow(3, 3, '#000', 6);
-            lineY += 44;
+            this.add.text(panelX, lineY, 'Очки: ' + this.score, {
+                fontSize: '22px',
+                fill: '#00FFFF',
+                fontStyle: 'bold',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5).setShadow(3, 3, '#000', 6).setDepth(103);
+            lineY += 28;
+
+            // Статистика
+            this.add.text(panelX, lineY, '🐦 ' + this.totalBirds + '   ⭐ ' + this.totalRegularItems, {
+                fontSize: '13px',
+                fill: '#CCCCCC',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5).setDepth(103);
+            lineY += 28;
+
+            // Кнопка "Спробувати знову"
+            const restartBtnBg = this.add.rectangle(panelX, lineY, 210, 40);
+            restartBtnBg.setFillStyle(0x003344, 0.6);
+            restartBtnBg.setStrokeStyle(2, 0x00ffff, 0.9);
+            restartBtnBg.setDepth(103);
+
+            const restartText = this.add.text(panelX, lineY, 'Спробувати знову', {
+                fontSize: '16px',
+                fill: '#00FFFF',
+                fontStyle: 'bold',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5).setDepth(104);
+
+            // Пульсація кнопки
+            this.tweens.add({
+                targets: [restartBtnBg, restartText],
+                alpha: 0.6,
+                yoyo: true,
+                repeat: -1,
+                duration: 800
+            });
 
             // Підказка
-            this.add.text(centerX, lineY, 'Натисни, щоб почати спочатку', {
-                fontSize: '18px', fill: '#AAAAAA'
-            }).setOrigin(0.5);
+            const hintY = lineY + 32;
+            this.add.text(panelX, hintY, 'Натисни, щоб почати спочатку', {
+                fontSize: '11px',
+                fill: '#888888',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5).setDepth(103);
+
+            // Тепер визначаємо фактичну висоту панелі за вмістом
+            const contentTop = panelY - 170;
+            const contentBottom = hintY + 14;
+            const contentHeight = contentBottom - contentTop;
+            const panelH = Math.min(contentHeight + 20, this.GH - 80);
+            const newPanelY = (contentTop + contentBottom) / 2;
+
+            // Малюємо рамку ПІД текстом, але НАД затемненням (depth 101 та 102)
+            // Внутрішнє світіння рамки (зовні)
+            const glow = this.add.rectangle(panelX, newPanelY, panelW + 8, panelH + 8);
+            glow.setOrigin(0.5);
+            glow.setStrokeStyle(3, 0xff00ff, 0.4);
+            glow.setFillStyle(0x000000, 0);
+            glow.setDepth(101);
+
+            // Декоративна рамка
+            const frame = this.add.rectangle(panelX, newPanelY, panelW, panelH, 0x0a0a2e, 0.95);
+            frame.setOrigin(0.5);
+            frame.setStrokeStyle(2, 0x00ffff, 0.8);
+            frame.setDepth(102);
 
             const restart = () => {
                 this.input.removeAllListeners();
@@ -2563,6 +2761,7 @@ class MainScene extends Phaser.Scene {
             };
             this.input.once('pointerdown', restart);
             this.input.keyboard.once('keydown-SPACE', restart);
+            this.input.keyboard.once('keydown-ENTER', restart);
         }
     }
 
@@ -2586,12 +2785,17 @@ const config = {
     pixelArt: true,
     antialias: false,
     roundPixels: true,
+    backgroundColor: '#020208',
     scale: {
         mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        expandParent: false
     },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
-    scene: MainScene
+    scene: MainScene,
+    fps: {
+        target: 60,
+        forceSetTimeOut: false,
+        smoothStep: true
+    }
 };
-
-const game = null;
