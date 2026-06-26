@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.5';
+const GAME_VERSION = 'v1.6';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -1834,8 +1834,8 @@ class MainScene extends Phaser.Scene {
         this.rainItems = this.add.group(); // Дождь предметов в режиме Мечты
 
         // Спавнеры
-        this.time.addEvent({ delay: 1400, callback: this.spawnObstacle, callbackScope: this, loop: true });
-        this.time.addEvent({ delay: 1000, callback: this.spawnCollectible, callbackScope: this, loop: true });
+        this.time.addEvent({ delay: 2200, callback: this.spawnObstacle, callbackScope: this, loop: true });
+        this.time.addEvent({ delay: 1400, callback: this.spawnCollectible, callbackScope: this, loop: true });
         this.time.addEvent({ delay: 2500, callback: this.spawnBird, callbackScope: this, loop: true });
         this.time.addEvent({ delay: 3600, callback: this.spawnSuperItem, callbackScope: this, loop: true });
 
@@ -2372,8 +2372,8 @@ class MainScene extends Phaser.Scene {
 
         // Перезапускаем спавнеры
         this.time.removeAllEvents();
-        this.time.addEvent({ delay: 1400, callback: this.spawnObstacle, callbackScope: this, loop: true });
-        this.time.addEvent({ delay: 1000, callback: this.spawnCollectible, callbackScope: this, loop: true });
+        this.time.addEvent({ delay: 2200, callback: this.spawnObstacle, callbackScope: this, loop: true });
+        this.time.addEvent({ delay: 1400, callback: this.spawnCollectible, callbackScope: this, loop: true });
         this.time.addEvent({ delay: 2500, callback: this.spawnBird, callbackScope: this, loop: true });
         this.time.addEvent({ delay: 3600, callback: this.spawnSuperItem, callbackScope: this, loop: true });
         // Наступна Мрія: поточний рахунок + 1000 (щоб не спавнилась одразу)
