@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.1';
+const GAME_VERSION = 'v1.2';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -1921,8 +1921,13 @@ class MainScene extends Phaser.Scene {
         if (this.gameOver) return;
 
         // Коефіцієнт кадра: робить рух незалежним від FPS (на телефоні FPS нижчий).
-        // 16.6667мс = 1 кадр при 60fps. Обмежуємо, щоб лаг-спайки не телепортували об'єкти.
-        const f = Math.min((delta || 16.6667) / 16.6667, 5);
+        // Беремо реальний час через performance.now() — обходить згладжування Phaser,
+        // яке могло не компенсувати низький FPS. 16.6667мс = 1 кадр при 60fps.
+        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        if (!this._lastUpdate) this._lastUpdate = now;
+        let realDelta = now - this._lastUpdate;
+        this._lastUpdate = now;
+        const f = Math.min(realDelta / 16.6667, 6);
 
         this.gameSpeed += 0.00003 * f; // Более плавное ускорение
         let groundSpeed = this.gameSpeed * f;
@@ -2137,16 +2142,19 @@ class MainScene extends Phaser.Scene {
             obs.flipX = true; // Мордой к Мие (влево)
             obs.play('dog');
             this.playBuffer('bark', 0.8); // Гав! (реальный звук)
-            this.tweens.add({ targets: obs, y: spawnY - 3, yoyo: true, repeat: -1, duration: 180 });
-        } else if (key === 'lollipop') {
-            this.tweens.add({ targets: obs, angle: 360, repeat: -1, duration: 1100 });
-            this.tweens.add({ targets: obs, scale: 1.12, yoyo: true, repeat: -1, duration: 420 });
-        } else if (key === 'mushroom') {
-            this.tweens.add({ targets: obs, y: spawnY - 6, yoyo: true, repeat: -1, duration: 520, ease: 'Sine.easeInOut' });
-            this.tweens.add({ targets: obs, angle: { from: -4, to: 4 }, yoyo: true, repeat: -1, duration: 640 });
-        } else {
-            this.tweens.add({ targets: obs, scaleX: 1.15, scaleY: 0.9, yoyo: true, repeat: -1, duration: 480 });
-            this.tweens.add({ targets: obs, angle: { from: -3, to: 3 }, yoyo: true, repeat: -1, duration: 600 });
+            if (!this.isMobile) this.tweens.add({ targets: obs, y: spawnY - 3, yoyo: true, repeat: -1, duration: 180 });
+        } else if (!this.isMobile) {
+            // Декоративні анімації лише на ПК (на телефоні економимо FPS)
+            if (key === 'lollipop') {
+                this.tweens.add({ targets: obs, angle: 360, repeat: -1, duration: 1100 });
+                this.tweens.add({ targets: obs, scale: 1.12, yoyo: true, repeat: -1, duration: 420 });
+            } else if (key === 'mushroom') {
+                this.tweens.add({ targets: obs, y: spawnY - 6, yoyo: true, repeat: -1, duration: 520, ease: 'Sine.easeInOut' });
+                this.tweens.add({ targets: obs, angle: { from: -4, to: 4 }, yoyo: true, repeat: -1, duration: 640 });
+            } else {
+                this.tweens.add({ targets: obs, scaleX: 1.15, scaleY: 0.9, yoyo: true, repeat: -1, duration: 480 });
+                this.tweens.add({ targets: obs, angle: { from: -3, to: 3 }, yoyo: true, repeat: -1, duration: 600 });
+            }
         }
 
         this.obstacles.add(obs);
@@ -2161,26 +2169,26 @@ class MainScene extends Phaser.Scene {
         const item = this.add.sprite(this.spawnX, y, key);
         item.setData('superItem', true);
 
-        if (key === 'megaComet') {
-            item.setData('points', 250);
-            this.tweens.add({ targets: item, angle: 360, repeat: -1, duration: 650 });
-            this.tweens.add({ targets: item, y: y + 34, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
-        } else if (key === 'energyVitamin') {
-            item.setData('points', 150);
-            this.tweens.add({ targets: item, scale: 1.35, yoyo: true, repeat: -1, duration: 220 });
-            this.tweens.add({ targets: item, angle: 360, repeat: -1, duration: 780 });
-        } else if (key === 'angelHeart') {
-            item.setData('points', 300);
-            this.tweens.add({ targets: item, y: y - 30, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.easeInOut' });
-            this.tweens.add({ targets: item, scaleX: 1.22, scaleY: 1.12, yoyo: true, repeat: -1, duration: 340 });
-        } else if (key === 'rainbowCrystal') {
-            item.setData('points', 500);
-            this.tweens.add({ targets: item, angle: { from: -18, to: 18 }, yoyo: true, repeat: -1, duration: 260 });
-            this.tweens.add({ targets: item, alpha: 0.45, yoyo: true, repeat: -1, duration: 260 });
-        } else {
-            item.setData('points', 1000);
-            this.tweens.add({ targets: item, y: y + 22, yoyo: true, repeat: -1, duration: 420, ease: 'Sine.easeInOut' });
-            this.tweens.add({ targets: item, scale: 1.25, yoyo: true, repeat: -1, duration: 240 });
+        const superPts = { megaComet: 250, energyVitamin: 150, angelHeart: 300, rainbowCrystal: 500, fairyBonus: 1000 };
+        item.setData('points', superPts[key] || 100);
+
+        if (!this.isMobile) {
+            if (key === 'megaComet') {
+                this.tweens.add({ targets: item, angle: 360, repeat: -1, duration: 650 });
+                this.tweens.add({ targets: item, y: y + 34, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
+            } else if (key === 'energyVitamin') {
+                this.tweens.add({ targets: item, scale: 1.35, yoyo: true, repeat: -1, duration: 220 });
+                this.tweens.add({ targets: item, angle: 360, repeat: -1, duration: 780 });
+            } else if (key === 'angelHeart') {
+                this.tweens.add({ targets: item, y: y - 30, yoyo: true, repeat: -1, duration: 1100, ease: 'Sine.easeInOut' });
+                this.tweens.add({ targets: item, scaleX: 1.22, scaleY: 1.12, yoyo: true, repeat: -1, duration: 340 });
+            } else if (key === 'rainbowCrystal') {
+                this.tweens.add({ targets: item, angle: { from: -18, to: 18 }, yoyo: true, repeat: -1, duration: 260 });
+                this.tweens.add({ targets: item, alpha: 0.45, yoyo: true, repeat: -1, duration: 260 });
+            } else {
+                this.tweens.add({ targets: item, y: y + 22, yoyo: true, repeat: -1, duration: 420, ease: 'Sine.easeInOut' });
+                this.tweens.add({ targets: item, scale: 1.25, yoyo: true, repeat: -1, duration: 240 });
+            }
         }
 
         this.superItems.add(item);
@@ -2401,8 +2409,10 @@ class MainScene extends Phaser.Scene {
         bird.setFlipX(false);
         bird.play('birdFly');
         bird.setData('points', birdPoints);
-        this.tweens.add({ targets: bird, scaleY: birdScale * 0.72, yoyo: true, repeat: -1, duration: 140 });
-        this.tweens.add({ targets: bird, angle: { from: -8, to: 8 }, yoyo: true, repeat: -1, duration: 240 });
+        if (!this.isMobile) {
+            this.tweens.add({ targets: bird, scaleY: birdScale * 0.72, yoyo: true, repeat: -1, duration: 140 });
+            this.tweens.add({ targets: bird, angle: { from: -8, to: 8 }, yoyo: true, repeat: -1, duration: 240 });
+        }
         this.birds.add(bird);
     }
 
@@ -2415,8 +2425,10 @@ class MainScene extends Phaser.Scene {
             let y = Phaser.Math.Between(this.groundY - 136, this.groundY - 64);
             let vitamin = this.add.sprite(this.spawnX, y, 'vitamin');
             vitamin.setData('bonus', 'superjump');
-            this.tweens.add({ targets: vitamin, angle: 360, repeat: -1, duration: 800 });
-            this.tweens.add({ targets: vitamin, scale: 1.25, yoyo: true, repeat: -1, duration: 260 });
+            if (!this.isMobile) {
+                this.tweens.add({ targets: vitamin, angle: 360, repeat: -1, duration: 800 });
+                this.tweens.add({ targets: vitamin, scale: 1.25, yoyo: true, repeat: -1, duration: 260 });
+            }
             this.collectibles.add(vitamin);
             return;
         }
@@ -2434,15 +2446,17 @@ class MainScene extends Phaser.Scene {
 
         let item = this.add.sprite(this.spawnX, y, key);
 
-        if (key === 'star') {
-            this.tweens.add({ targets: item, angle: 360, repeat: -1, duration: 900 });
-            this.tweens.add({ targets: item, scale: 1.25, yoyo: true, repeat: -1, duration: 320 });
-        } else if (key === 'heart') {
-            this.tweens.add({ targets: item, scaleX: 1.28, scaleY: 1.18, yoyo: true, repeat: -1, duration: 260 });
-            this.tweens.add({ targets: item, y: y - 8, yoyo: true, repeat: -1, duration: 520, ease: 'Sine.easeInOut' });
-        } else {
-            this.tweens.add({ targets: item, angle: { from: -18, to: 18 }, yoyo: true, repeat: -1, duration: 360 });
-            this.tweens.add({ targets: item, scale: 1.18, yoyo: true, repeat: -1, duration: 410 });
+        if (!this.isMobile) {
+            if (key === 'star') {
+                this.tweens.add({ targets: item, angle: 360, repeat: -1, duration: 900 });
+                this.tweens.add({ targets: item, scale: 1.25, yoyo: true, repeat: -1, duration: 320 });
+            } else if (key === 'heart') {
+                this.tweens.add({ targets: item, scaleX: 1.28, scaleY: 1.18, yoyo: true, repeat: -1, duration: 260 });
+                this.tweens.add({ targets: item, y: y - 8, yoyo: true, repeat: -1, duration: 520, ease: 'Sine.easeInOut' });
+            } else {
+                this.tweens.add({ targets: item, angle: { from: -18, to: 18 }, yoyo: true, repeat: -1, duration: 360 });
+                this.tweens.add({ targets: item, scale: 1.18, yoyo: true, repeat: -1, duration: 410 });
+            }
         }
         this.collectibles.add(item);
     }
