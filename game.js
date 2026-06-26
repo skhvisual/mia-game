@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.7';
+const GAME_VERSION = 'v1.8';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -337,14 +337,36 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') startGame();
     });
 
-    // Кнопки керування Мією (вліво/вправо)
+    // Кнопки керування Мією (вліво/вправо + свайп вгору = стрибок)
     window._miaMove = null;
+    window._miaJumpRequest = false;
+    const SWIPE_UP_THRESHOLD = 35; // px свайпу вгору для стрибка
     const bindMove = (id, dir) => {
         const btn = document.getElementById(id);
         if (!btn) return;
-        const press = (e) => { e.preventDefault(); window._miaMove = dir; };
-        const release = (e) => { e.preventDefault(); if (window._miaMove === dir) window._miaMove = null; };
+        let startY = null;
+        let swiped = false;
+        const press = (e) => {
+            e.preventDefault();
+            window._miaMove = dir;
+            startY = e.clientY;
+            swiped = false;
+        };
+        const move = (e) => {
+            if (startY === null || swiped) return;
+            if (startY - e.clientY >= SWIPE_UP_THRESHOLD) {
+                swiped = true;
+                window._miaJumpRequest = true;
+            }
+        };
+        const release = (e) => {
+            e.preventDefault();
+            if (window._miaMove === dir) window._miaMove = null;
+            startY = null;
+            swiped = false;
+        };
         btn.addEventListener('pointerdown', press);
+        btn.addEventListener('pointermove', move);
         btn.addEventListener('pointerup', release);
         btn.addEventListener('pointerleave', release);
         btn.addEventListener('pointercancel', release);
@@ -1936,6 +1958,13 @@ class MainScene extends Phaser.Scene {
 
         this.gameSpeed += 0.00003 * f; // Более плавное ускорение
         let groundSpeed = this.gameSpeed * f;
+
+        // Стрибок через свайп вгору на кнопці руху
+        if (window._miaJumpRequest) {
+            window._miaJumpRequest = false;
+            this.initAudioContext();
+            this.jump();
+        }
 
         // Центр Мії по Y (origin у Мії = ноги, тому для коллізій беремо середину тіла)
         const miaCenterY = this.mia.y - this.mia.displayHeight / 2;

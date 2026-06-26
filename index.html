@@ -369,6 +369,36 @@
             background: rgba(0,255,255,0.35);
             transform: scale(0.92);
         }
+        .move-btn-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+        }
+        .jump-hint {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0px;
+            pointer-events: none;
+        }
+        .jump-arrow {
+            display: block;
+            color: rgba(0,255,255,0.85);
+            font-size: 16px;
+            line-height: 1;
+            animation: jumpArrowFloat 1.1s ease-in-out infinite;
+            text-shadow: 0 0 8px rgba(0,255,255,0.9);
+        }
+        .jump-arrow:nth-child(1) { animation-delay: 0s;    opacity: 0.4; }
+        .jump-arrow:nth-child(2) { animation-delay: 0.18s; opacity: 0.7; }
+        .jump-arrow:nth-child(3) { animation-delay: 0.36s; opacity: 1.0; }
+        @keyframes jumpArrowFloat {
+            0%   { transform: translateY(6px);  opacity: inherit; }
+            50%  { transform: translateY(-4px); opacity: inherit; }
+            100% { transform: translateY(6px);  opacity: inherit; }
+        }
 
         #lives-display {
             display: none;
@@ -501,12 +531,26 @@
     <div id="lives-display">❤️ ❤️ ❤️</div>
     <div id="game-container"></div>
 
-    <!-- Кнопки керування (вліво/вправо). Тап по центру екрану = стрибок -->
+    <!-- Кнопки керування (вліво/вправо). Свайп вгору або тап = стрибок -->
     <div id="touch-controls">
-        <button id="move-left-btn" class="move-btn" aria-label="Вліво">◀</button>
-        <button id="move-right-btn" class="move-btn" aria-label="Вправо">▶</button>
+        <div class="move-btn-wrap">
+            <div class="jump-hint">
+                <span class="jump-arrow">▲</span>
+                <span class="jump-arrow">▲</span>
+                <span class="jump-arrow">▲</span>
+            </div>
+            <button id="move-left-btn" class="move-btn" aria-label="Вліво">◀</button>
+        </div>
+        <div class="move-btn-wrap">
+            <div class="jump-hint">
+                <span class="jump-arrow">▲</span>
+                <span class="jump-arrow">▲</span>
+                <span class="jump-arrow">▲</span>
+            </div>
+            <button id="move-right-btn" class="move-btn" aria-label="Вправо">▶</button>
+        </div>
     </div>
-    <script src="game.js?v=1.7"></script>
+    <script src="game.js?v=1.8"></script>
     <script>
         // ── Діагностика: показуємо реальні параметри екрану та FPS ──
         (function () {
