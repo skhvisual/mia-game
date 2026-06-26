@@ -1860,11 +1860,6 @@ class MainScene extends Phaser.Scene {
         this.scoreText = this.add.text(20, 60, 'Очки: 0', { fontSize: '32px', fill: '#FFF', fontStyle: 'bold' });
         this.scoreText.setShadow(2, 2, '#000', 4);
 
-        // Версія гри (праворуч угорі на canvas) — для перевірки, що завантажилась нова збірка
-        this.add.text(this.GW - 12, 12, GAME_VERSION, {
-            fontSize: '18px', fill: '#00FFD0', fontStyle: 'bold'
-        }).setOrigin(1, 0).setShadow(1, 1, '#000', 3).setDepth(120);
-
         // Відображення життів (на canvas) - в левом верхнем углу
         this.livesText = this.add.text(20, 20, '', { fontSize: '32px', fill: '#FF3366', fontStyle: 'bold' });
         this.livesText.setOrigin(0, 0);
