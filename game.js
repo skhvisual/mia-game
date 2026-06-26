@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.0';
+const GAME_VERSION = 'v2.1';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -343,13 +343,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const joystick = document.getElementById('joystick-zone');
     const knob     = document.getElementById('joystick-knob');
-    const jumpBtn  = document.getElementById('jump-btn');
+
+    let joyId = null; // shared so right joystick can check
 
     if (joystick && knob) {
-        const RADIUS   = 29;  // max knob offset px
-        const H_DEAD   = 10;  // горизонтальний dead zone
-        const JUMP_THR = 28;  // свайп вгору для стрибка
-        let joyId = null, joyOriginX = 0, joyOriginY = 0, joyJumped = false;
+        const RADIUS   = 29;
+        const H_DEAD   = 10;
+        const JUMP_THR = 28;
+        let joyOriginX = 0, joyOriginY = 0, joyJumped = false;
 
         joystick.addEventListener('pointerdown', e => {
             e.preventDefault();
@@ -392,11 +393,49 @@ window.addEventListener('DOMContentLoaded', async () => {
         joystick.addEventListener('pointercancel', joyEnd);
     }
 
-    if (jumpBtn) {
-        jumpBtn.addEventListener('pointerdown', e => {
+    // Правий джойстик — свайп вгору = стрибок, вліво/вправо = рух
+    const joystickR = document.getElementById('joystick-zone-r');
+    const knobR     = document.getElementById('joystick-knob-r');
+    if (joystickR && knobR) {
+        const RADIUS   = 29;
+        const H_DEAD   = 10;
+        const JUMP_THR = 28;
+        let joyRId = null, joyROX = 0, joyROY = 0, joyRJumped = false;
+
+        joystickR.addEventListener('pointerdown', e => {
             e.preventDefault();
-            window._miaJumpRequest = true;
+            joyRId = e.pointerId;
+            joyROX = e.clientX; joyROY = e.clientY;
+            joyRJumped = false;
+            joystickR.setPointerCapture(e.pointerId);
         });
+
+        joystickR.addEventListener('pointermove', e => {
+            if (e.pointerId !== joyRId) return;
+            const dx = e.clientX - joyROX;
+            const dy = e.clientY - joyROY;
+            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), RADIUS);
+            const angle = Math.atan2(dy, dx);
+            knobR.style.transform = `translate(calc(-50% + ${Math.cos(angle)*dist}px), calc(-50% + ${Math.sin(angle)*dist}px))`;
+
+            if (!joyRJumped && joyROY - e.clientY >= JUMP_THR) {
+                joyRJumped = true;
+                window._miaJumpRequest = true;
+                joyROY = e.clientY;
+            }
+            if (dx > H_DEAD)       window._miaMove = 'right';
+            else if (dx < -H_DEAD) window._miaMove = 'left';
+            else if (window._miaMove !== 'left' && window._miaMove !== 'right') window._miaMove = null;
+        });
+
+        const joyREnd = e => {
+            if (e.pointerId !== joyRId) return;
+            joyRId = null; joyRJumped = false;
+            knobR.style.transform = 'translate(-50%, -50%)';
+            if (joyId === null) window._miaMove = null;
+        };
+        joystickR.addEventListener('pointerup',     joyREnd);
+        joystickR.addEventListener('pointercancel', joyREnd);
     }
 
     // Перевіряємо чи вже є активна сесія
