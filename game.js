@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.4';
+const GAME_VERSION = 'v1.5';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -1722,12 +1722,12 @@ class MainScene extends Phaser.Scene {
         this.dreamMusic = null;
         this.mriyaNextThreshold = 1200; // Наступна Мрія через 1200 очок
 
-        // Фіксовані константи ігрового поля (540×960 — портрет)
-        this.GW = 540;
-        this.GH = 960;
-        this.groundY = 920;
-        this.spawnX = 640;
-        this.YS = this.GH / 600; // Масштаб по Y для перерахунку з ландшафту (1.6)
+        // Розміри ігрового поля = реальний розмір екрана (1 гра-піксель = 1 CSS-піксель)
+        this.GW = this.scale.width;
+        this.GH = this.scale.height;
+        this.groundY = Math.round(this.GH * 0.958);
+        this.spawnX = this.GW + 100;
+        this.YS = this.GH / 600;
 
         // Клавиатура
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -2874,16 +2874,16 @@ class MainScene extends Phaser.Scene {
 
 const config = {
     type: Phaser.AUTO,
-    width: 540,
-    height: 960,
+    width: window.innerWidth || 360,
+    height: window.innerHeight || 640,
     parent: 'game-container',
     pixelArt: true,
     antialias: false,
     roundPixels: true,
     backgroundColor: '#020208',
     scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        mode: Phaser.Scale.NONE,
+        autoCenter: Phaser.Scale.NO_CENTER
     },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
     scene: MainScene,
