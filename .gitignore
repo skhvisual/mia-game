@@ -5,6 +5,7 @@ game_log.txt
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # System
 .DS_Store
