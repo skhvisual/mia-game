@@ -1691,11 +1691,11 @@ class MainScene extends Phaser.Scene {
         this.dreamMusic = null;
         this.mriyaNextThreshold = 1000; // Наступна Мрія через 1000 очок
 
-        // Адаптивні константи
-        this.GW = this.scale.width;   // Ширина ігрового поля
-        this.GH = this.scale.height;  // Висота
-        this.groundY = this.GH - 40;  // Лінія землі
-        this.spawnX = this.GW + 100;  // За межами екрана
+        // Фіксовані константи ігрового поля (1000×600)
+        this.GW = 1000;
+        this.GH = 600;
+        this.groundY = 560;
+        this.spawnX = 1100;
 
         // Клавиатура
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -1710,28 +1710,6 @@ class MainScene extends Phaser.Scene {
         this.bgGraphics.setDepth(-1);
         this.bgGraphics.fillGradientStyle(0x020208, 0x020208, 0x2d0036, 0x1a0033, 1);
         this.bgGraphics.fillRect(0, 0, this.GW, this.GH);
-
-        // Обробка ресайзу для адаптивності
-        this.scale.on('resize', (gameSize) => {
-            this.GW = gameSize.width;
-            this.GH = gameSize.height;
-            this.groundY = this.GH - 40;
-            this.spawnX = this.GW + 100;
-            // Оновлюємо фон та землю
-            if (this.bgGraphics) {
-                this.bgGraphics.clear();
-                this.bgGraphics.fillGradientStyle(0x020208, 0x020208, 0x2d0036, 0x1a0033, 1);
-                this.bgGraphics.fillRect(0, 0, this.GW, this.GH);
-            }
-            if (this.ground) {
-                this.ground.setPosition(this.GW / 2, this.groundY + 20);
-                this.ground.body.setSize(this.GW, 40);
-            }
-            if (this.neonLine) {
-                this.neonLine.setPosition(this.GW / 2, this.groundY);
-                this.neonLine.setSize(this.GW, 4);
-            }
-        });
 
         // Облака (пушистые, с неоновым свечением)
         this.clouds = this.add.group();
@@ -1762,10 +1740,6 @@ class MainScene extends Phaser.Scene {
 
         // Линия неона сверху земли
         this.neonLine = this.add.rectangle(this.GW / 2, this.groundY, this.GW, 4, 0x00FFFF);
-        
-        // Базовый масштаб игры (для адаптивности)
-        const baseHeight = 600;
-        this.scaleFactor = Math.min(2, Math.max(1, this.GH / baseHeight));
 
         // Анимации Мии и Собаки
         if (!this.anims.exists('run')) {
@@ -1795,14 +1769,13 @@ class MainScene extends Phaser.Scene {
             });
         }
 
-        // Игрок (Мия) - увеличиваем масштаб пропорционально экрану
-        this.mia = this.physics.add.sprite(Math.min(150, this.GW * 0.2), this.groundY - 44 * this.scaleFactor, 'mia0');
-        this.mia.setScale(1.1 * this.scaleFactor);
+        // Игрок (Мия)
+        this.mia = this.physics.add.sprite(120, this.groundY - 48, 'mia0');
+        this.mia.setScale(1.1);
         this.mia.play('run');
         this.miaReady = false;
         
-        // Исправляем гравитацию для всех размеров экрана
-        this.mia.setGravityY(2300 * Math.max(1, this.scaleFactor)); 
+        this.mia.setGravityY(2300);
         this.mia.setCollideWorldBounds(true);
         this.physics.add.collider(this.mia, this.ground, () => {
             this.miaReady = true;
@@ -1827,31 +1800,37 @@ class MainScene extends Phaser.Scene {
 
         // Спавним Мечту — тепер за очками (через update)
 
-        // Система частиц (Phaser 3.60+)
+        // Система частиц (Phaser 3.60+) — зі зменшеною кількістю для мобільних
+        this.isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const particleLifespan = this.isMobile ? 300 : 500;
+        const particleCount = this.isMobile ? 3 : 5;
+
         this.emitter = this.add.particles(0, 0, 'particle', {
             speed: { min: -120, max: 120 },
             scale: { start: 1, end: 0 },
-            lifespan: 500,
+            lifespan: particleLifespan,
+            quantity: particleCount,
             frequency: -1
         });
 
-        // Хелпер для взрыва частиц с нужным цветом
+        // Хелпер для взрыва частиц с нужным цветом — менше частинок на мобільних
         this.burstParticles = (count, x, y, color) => {
+            const actualCount = this.isMobile ? Math.ceil(count * 0.5) : count;
             this.emitter.particleTint = color;
-            this.emitter.explode(count, x, y);
+            this.emitter.explode(actualCount, x, y);
         };
 
         // Счётчики
-        this.scoreText = this.add.text(Math.max(24, 12), Math.max(18, this.GH * 0.04), 'Очки: 0', { fontSize: '24px', fill: '#FFF', fontStyle: 'bold' });
+        this.scoreText = this.add.text(20, 20, 'Очки: 0', { fontSize: '24px', fill: '#FFF', fontStyle: 'bold' });
         this.scoreText.setShadow(2, 2, '#000', 4);
 
         // Відображення життів (на canvas)
-        this.livesText = this.add.text(this.GW / 2, 18, '', { fontSize: '22px', fill: '#FF3366', fontStyle: 'bold' });
+        this.livesText = this.add.text(this.GW / 2, 20, '', { fontSize: '22px', fill: '#FF3366', fontStyle: 'bold' });
         this.livesText.setOrigin(0.5, 0);
         this.livesText.setShadow(2, 2, '#000', 4);
         this.updateLivesDisplay();
 
-        this.superJumpText = this.add.text(Math.max(24, 12), Math.max(50, this.GH * 0.1), 'Суперстрибок: 0', { fontSize: '18px', fill: '#AAFF00', fontStyle: 'bold' });
+        this.superJumpText = this.add.text(20, 50, 'Суперстрибок: 0', { fontSize: '18px', fill: '#AAFF00', fontStyle: 'bold' });
         this.superJumpText.setShadow(2, 2, '#000', 4);
 
         // Анимация пульсации всей области суперпрыжков
@@ -2043,21 +2022,20 @@ class MainScene extends Phaser.Scene {
 
         const jumpIdx = Math.floor(Math.random() * 2) + 1;
         const onGround = this.mia.body.touching.down || this.mia.body.blocked.down;
-        const sf = this.scaleFactor || 1;
 
         if (onGround) {
             this.canUseAirSuperJump = true;
-            this.mia.setVelocityY(-720 * sf);
+            this.mia.setVelocityY(-720);
             this.playBuffer('jump' + jumpIdx, 0.6);
             return;
         }
 
-        // Суперпрыжок: второе нажатие в воздухе, от текущей высоты
+        // Суперпрыжок: второе нажатие в воздухе
         if (this.superJumps > 0 && this.canUseAirSuperJump) {
             this.superJumps -= 1;
             this.canUseAirSuperJump = false;
             this.superJumpText.setText('Суперстрибок: ' + this.superJumps);
-            this.mia.setVelocityY(-820 * sf);
+            this.mia.setVelocityY(-820);
             this.burstParticles(24, this.mia.x, this.mia.y + 18, 0xAAFF00);
             this.playBuffer('jump' + jumpIdx, 0.6);
         }
@@ -2205,9 +2183,10 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setShadow(4, 4, '#FFAA00', 8);
         this.tweens.add({ targets: dreamText, alpha: 0.3, yoyo: true, repeat: -1, duration: 600 });
 
-        // Дождь предметов — спавним каждые 200ms
+        // Дождь предметов — спавним каждые 250ms
+        const rainInterval = this.isMobile ? 350 : 250;
         this.rainTimer = this.time.addEvent({
-            delay: 200,
+            delay: rainInterval,
             loop: true,
             callback: this.spawnRainItem,
             callbackScope: this
@@ -2779,17 +2758,16 @@ class MainScene extends Phaser.Scene {
 
 const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: 1000,
+    height: 600,
     parent: 'game-container',
     pixelArt: true,
     antialias: false,
     roundPixels: true,
     backgroundColor: '#020208',
     scale: {
-        mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        expandParent: false
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
     },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
     scene: MainScene,
