@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.2';
+const GAME_VERSION = 'v2.3';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -2100,12 +2100,9 @@ class MainScene extends Phaser.Scene {
                 item.x -= groundSpeed;
             }
 
-            // Проверка сбора — лише в стрибку (предмети недоступні без стрибка).
-            // Враховуємо реальний розмір предмета (displayWidth/Height) + півширини тіла Мії,
-            // щоб не проскакувати повз на швидкості.
-            const hitX = item.displayWidth / 2 + this.mia.displayWidth * 0.5 + 6;
-            const hitY = item.displayHeight / 2 + this.mia.displayHeight * 0.55 + 6;
-            if (miaAirborne && Math.abs(this.mia.x - item.x) < hitX && Math.abs(miaCenterY - item.y) < hitY) {
+            const hitX = item.displayWidth * 0.75 + this.mia.displayWidth * 0.55;
+            const hitY = item.displayHeight * 0.75 + this.mia.displayHeight * 0.65;
+            if (Math.abs(this.mia.x - item.x) < hitX && Math.abs(miaCenterY - item.y) < hitY) {
                 this.collectItem(item);
                 continue;
             }
