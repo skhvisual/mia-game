@@ -198,6 +198,15 @@
             opacity: 0.7;
             letter-spacing: 1px;
         }
+        #diag-label {
+            margin-top: 6px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #ffd24d;
+            opacity: 0.85;
+            font-family: monospace;
+            white-space: pre-line;
+        }
         .switch-link {
             margin-top: 14px;
             font-size: 13px;
@@ -472,7 +481,8 @@
             <div class="card-footer neon-footer">
                 Гра розроблена для Мії з міста Мирнівка
             </div>
-            <div id="version-label">v1.2</div>
+            <div id="version-label">v1.3</div>
+            <div id="diag-label"></div>
         </div>
     </div>
 
@@ -496,7 +506,30 @@
         <button id="move-left-btn" class="move-btn" aria-label="Вліво">◀</button>
         <button id="move-right-btn" class="move-btn" aria-label="Вправо">▶</button>
     </div>
-    <script src="game.js?v=1.2"></script>
+    <script src="game.js?v=1.3"></script>
+    <script>
+        // ── Діагностика: показуємо реальні параметри екрану та FPS ──
+        (function () {
+            const el = document.getElementById('diag-label');
+            if (!el) return;
+            let frames = 0, fps = 0, last = performance.now();
+            function tick(now) {
+                frames++;
+                if (now - last >= 1000) { fps = frames; frames = 0; last = now; }
+                const cv = document.querySelector('#game-container canvas');
+                const cssW = cv ? Math.round(cv.getBoundingClientRect().width) : 0;
+                const cssH = cv ? Math.round(cv.getBoundingClientRect().height) : 0;
+                const scale = cssW ? (cssW / 540).toFixed(2) : '—';
+                el.textContent =
+                    'FPS: ' + fps +
+                    '\nЕкран: ' + window.innerWidth + '×' + window.innerHeight +
+                    '  DPR: ' + (window.devicePixelRatio || 1).toFixed(2) +
+                    '\nCanvas(CSS): ' + cssW + '×' + cssH + '  scale: ' + scale;
+                requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        })();
+    </script>
     <script>
         // ── Telegram Mini App Integration ──
         (function() {
