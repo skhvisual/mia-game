@@ -1921,7 +1921,7 @@ class MainScene extends Phaser.Scene {
 
         // Коефіцієнт кадра: робить рух незалежним від FPS (на телефоні FPS нижчий).
         // 16.6667мс = 1 кадр при 60fps. Обмежуємо, щоб лаг-спайки не телепортували об'єкти.
-        const f = Math.min((delta || 16.6667) / 16.6667, 3);
+        const f = Math.min((delta || 16.6667) / 16.6667, 5);
 
         this.gameSpeed += 0.00003 * f; // Более плавное ускорение
         let groundSpeed = this.gameSpeed * f;
@@ -2194,9 +2194,11 @@ class MainScene extends Phaser.Scene {
         item.setScale(1.3 * 1.4);
         item.setData('dream', true);
 
-        // Бірюзове сяйво навколо предмета
+        // Бірюзове сяйво навколо предмета (glow важкий для мобільного GPU — лише на ПК)
         item.setTint(0x66FFE0);
-        try { item.postFX.addGlow(0x00FFD0, 6, 0, false, 0.1, 16); } catch (e) {}
+        if (!this.isMobile) {
+            try { item.postFX.addGlow(0x00FFD0, 6, 0, false, 0.1, 16); } catch (e) {}
+        }
         this.tweens.add({ targets: item, scale: { from: 1.3 * 1.4, to: 1.3 * 1.7 }, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.easeInOut' });
 
         // Миготіння
@@ -2204,12 +2206,13 @@ class MainScene extends Phaser.Scene {
 
         // Бірюзові іскри-хвіст (частіше)
         this.time.addEvent({
-            delay: 55,
+            delay: this.isMobile ? 120 : 55,
             loop: true,
             callback: () => {
                 if (item.active) {
                     this.emitter.particleTint = 0x00FFD0;
-                    this.emitter.explode(7, item.x + Phaser.Math.Between(-18, 18), item.y + Phaser.Math.Between(-18, 18));
+                    const n = this.isMobile ? 3 : 7;
+                    this.emitter.explode(n, item.x + Phaser.Math.Between(-18, 18), item.y + Phaser.Math.Between(-18, 18));
                 }
             }
         });
