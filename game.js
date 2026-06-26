@@ -1691,11 +1691,12 @@ class MainScene extends Phaser.Scene {
         this.dreamMusic = null;
         this.mriyaNextThreshold = 1000; // Наступна Мрія через 1000 очок
 
-        // Фіксовані константи ігрового поля (1000×600)
-        this.GW = 1000;
-        this.GH = 600;
-        this.groundY = 560;
-        this.spawnX = 1100;
+        // Фіксовані константи ігрового поля (540×960 — портрет)
+        this.GW = 540;
+        this.GH = 960;
+        this.groundY = 920;
+        this.spawnX = 640;
+        this.YS = this.GH / 600; // Масштаб по Y для перерахунку з ландшафту (1.6)
 
         // Клавиатура
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -1722,12 +1723,12 @@ class MainScene extends Phaser.Scene {
 
         // Деревья на фоне (неоновые силуэты с детальной кроной)
         this.trees = this.add.group();
-        let spacing = 150;
+        let spacing = 90;
         for(let i=0; i<6; i++) {
-            let x = i * spacing + Phaser.Math.Between(0, 50);
+            let x = i * spacing + Phaser.Math.Between(0, 30);
             let tree = this.add.image(x, this.groundY, 'tree');
             tree.setOrigin(0.5, 1);
-            let scale = 0.6 + Math.random() * 1.0;
+            let scale = 0.5 + Math.random() * 0.8;
             tree.setScale(scale);
             tree.setAlpha(0.3 + Math.random() * 0.4);
             this.trees.add(tree);
@@ -2066,14 +2067,14 @@ class MainScene extends Phaser.Scene {
         else this.lollipopCount = 0;
 
         // Идеальное позиционирование Y относительно поверхности земли
-        // Куст (36x36) -> центр y = groundY - 18
-        // Гриб (32x38) -> y = groundY - 19
-        // Леденец (34x48) -> y = groundY - 24
-        // Собака (42x32) -> y = groundY - 16
-        let spawnY = this.groundY - 18;
-        if (key === 'mushroom') spawnY = this.groundY - 19;
-        if (key === 'lollipop') spawnY = this.groundY - 24;
-        if (key.includes('dog')) spawnY = this.groundY - 16;
+        // Куст (36x36) -> центр y = groundY - 29
+        // Гриб (32x38) -> y = groundY - 30
+        // Леденец (34x48) -> y = groundY - 38
+        // Собака (42x32) -> y = groundY - 26
+        let spawnY = this.groundY - 29;
+        if (key === 'mushroom') spawnY = this.groundY - 30;
+        if (key === 'lollipop') spawnY = this.groundY - 38;
+        if (key.includes('dog')) spawnY = this.groundY - 26;
 
         let obs = this.add.sprite(this.spawnX, spawnY, key);
 
@@ -2101,7 +2102,7 @@ class MainScene extends Phaser.Scene {
 
         const types = ['megaComet', 'energyVitamin', 'angelHeart', 'rainbowCrystal', 'fairyBonus'];
         const key = Phaser.Utils.Array.GetRandom(types);
-        const y = Phaser.Math.Between(this.groundY - 260, this.groundY - 190); // Высота для суперпрыжка
+        const y = Phaser.Math.Between(this.groundY - 416, this.groundY - 304); // Высота для суперпрыжка
         const item = this.add.sprite(this.spawnX, y, key);
         item.setData('superItem', true);
 
@@ -2134,7 +2135,7 @@ class MainScene extends Phaser.Scene {
         if (this.gameOver || this.dreamSpawned) return;
         this.dreamSpawned = true;
 
-        const y = Phaser.Math.Between(this.groundY - 170, this.groundY - 150); // Висота стрибка — не на підлозі!
+        const y = Phaser.Math.Between(this.groundY - 272, this.groundY - 240); // Висота стрибка — не на підлозі!
         const item = this.add.sprite(this.spawnX, y, 'dream');
         item.setScale(1.3 * 0.7);
         item.setData('dream', true);
@@ -2229,7 +2230,7 @@ class MainScene extends Phaser.Scene {
         // Падение вниз
         this.tweens.add({
             targets: item,
-            y: Phaser.Math.Between(Math.min(this.GH * 0.4, 150), this.groundY - 20),
+            y: Phaser.Math.Between(this.GH * 0.3, this.groundY - 20),
             duration: Phaser.Math.Between(1500, 3000),
             ease: 'Sine.easeIn',
             onComplete: () => {
@@ -2291,20 +2292,20 @@ class MainScene extends Phaser.Scene {
         const sizeRoll = Math.random();
         let birdScale = 1.0;
         let birdPoints = 20;
-        let y = Phaser.Math.Between(this.groundY - 140, this.groundY - 95);
+        let y = Phaser.Math.Between(this.groundY - 224, this.groundY - 152);
 
         if (sizeRoll > 0.82) {
             birdScale = 1.35;
             birdPoints = 80;
-            y = Phaser.Math.Between(this.groundY - 165, this.groundY - 120);
+            y = Phaser.Math.Between(this.groundY - 264, this.groundY - 192);
         } else if (sizeRoll > 0.55) {
             birdScale = 0.9;
             birdPoints = 40;
-            y = Phaser.Math.Between(this.groundY - 150, this.groundY - 105);
+            y = Phaser.Math.Between(this.groundY - 240, this.groundY - 168);
         } else {
             birdScale = 0.6;
             birdPoints = 20;
-            y = Phaser.Math.Between(this.groundY - 135, this.groundY - 90);
+            y = Phaser.Math.Between(this.groundY - 216, this.groundY - 144);
         }
 
         let bird = this.add.sprite(this.spawnX, y, 'bird0');
@@ -2323,7 +2324,7 @@ class MainScene extends Phaser.Scene {
         let rand = Math.random();
         
         if (rand > 0.60) {
-            let y = Phaser.Math.Between(this.groundY - 150, this.groundY - 80);
+            let y = Phaser.Math.Between(this.groundY - 240, this.groundY - 128);
             let vitamin = this.add.sprite(this.spawnX, y, 'vitamin');
             vitamin.setData('bonus', 'superjump');
             this.tweens.add({ targets: vitamin, angle: 360, repeat: -1, duration: 800 });
@@ -2339,9 +2340,9 @@ class MainScene extends Phaser.Scene {
 
         // Высота прыжка: Мия стабильно достаёт около 80-120px от земли
         let y;
-        if (key === 'star') y = Phaser.Math.Between(this.groundY - 130, this.groundY - 85);
-        else if (key === 'heart') y = Phaser.Math.Between(this.groundY - 80, this.groundY - 40);
-        else y = Phaser.Math.Between(this.groundY - 110, this.groundY - 60);
+        if (key === 'star') y = Phaser.Math.Between(this.groundY - 208, this.groundY - 136);
+        else if (key === 'heart') y = Phaser.Math.Between(this.groundY - 128, this.groundY - 64);
+        else y = Phaser.Math.Between(this.groundY - 176, this.groundY - 96);
 
         let item = this.add.sprite(this.spawnX, y, key);
 
@@ -2363,7 +2364,7 @@ class MainScene extends Phaser.Scene {
         if (!this.superItemIcons[collectedKey]) {
             this.collectedOrder.push(collectedKey);
             const x = this.startIconX + (this.collectedOrder.length - 1) * 36;
-            const y = 84;
+            const y = 120;
             const icon = this.add.sprite(x, y, collectedKey).setScale(0.5);
             const countText = this.add.text(x + 12, y - 8, String(this.superItemsCollected[collectedKey]), { fontSize: '14px', fill: '#FFFFFF', fontStyle: 'bold' });
             countText.setShadow(2, 2, '#000', 4);
@@ -2758,8 +2759,8 @@ class MainScene extends Phaser.Scene {
 
 const config = {
     type: Phaser.AUTO,
-    width: 1000,
-    height: 600,
+    width: 540,
+    height: 960,
     parent: 'game-container',
     pixelArt: true,
     antialias: false,
