@@ -49,8 +49,9 @@ function showGameUI() {
     document.getElementById('game-container').style.display = 'block';
     document.getElementById('leaderboard-panel').style.display = 'block';
     document.getElementById('player-bar').style.display = 'block';
-    document.getElementById('lives-display').style.display = 'block';
     document.getElementById('current-player-name').textContent = currentPlayer?.name || 'Гравець';
+    document.getElementById('touch-controls').classList.add('active');
+    window._miaMove = null;
     // Telegram Mini App: show BackButton
     if (window.__tgBackButton) window.__tgBackButton.show();
 }
@@ -61,7 +62,8 @@ function showAuthUI() {
     document.getElementById('game-container').style.display = 'none';
     document.getElementById('leaderboard-panel').style.display = 'none';
     document.getElementById('player-bar').style.display = 'none';
-    document.getElementById('lives-display').style.display = 'none';
+    document.getElementById('touch-controls').classList.remove('active');
+    window._miaMove = null;
     resetAuthForms();
 }
 
@@ -100,7 +102,8 @@ function showStartUI() {
     document.getElementById('game-container').style.display = 'none';
     document.getElementById('leaderboard-panel').style.display = 'block';
     document.getElementById('player-bar').style.display = 'none';
-    document.getElementById('lives-display').style.display = 'none';
+    document.getElementById('touch-controls').classList.remove('active');
+    window._miaMove = null;
 
     if (currentPlayer) {
         // Залогинен — показываем только "Начать гру" и "Змінити акаунт"
@@ -152,7 +155,15 @@ async function refreshLeaderboard() {
     list.innerHTML = '';
     (data || []).forEach(row => {
         const li = document.createElement('li');
-        li.textContent = row.player_name + ': ' + row.score;
+        const name = document.createElement('span');
+        name.className = 'lb-name';
+        name.textContent = row.player_name;
+        name.title = row.player_name;
+        const score = document.createElement('span');
+        score.className = 'lb-score';
+        score.textContent = row.score;
+        li.appendChild(name);
+        li.appendChild(score);
         list.appendChild(li);
     });
 }
@@ -215,14 +226,13 @@ async function loginPlayer() {
 
     setAuthMessage('Входимо...');
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) { setAuthMessage(error.message); return; }
+    if (error) { setAuthMessage('❌ ' + error.message); return; }
 
     await loadPlayerProfile(data.user);
     document.getElementById('auth-email').value = '';
     document.getElementById('auth-password').value = '';
-    showStartUI();
-    await refreshLeaderboard();
-    setAuthMessage('');
+    refreshLeaderboard();
+    startGameLogged();
 }
 
 async function logoutPlayer() {
@@ -320,6 +330,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('player-name-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') startGame();
     });
+
+    // Кнопки керування Мією (вліво/вправо)
+    window._miaMove = null;
+    const bindMove = (id, dir) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const press = (e) => { e.preventDefault(); window._miaMove = dir; };
+        const release = (e) => { e.preventDefault(); if (window._miaMove === dir) window._miaMove = null; };
+        btn.addEventListener('pointerdown', press);
+        btn.addEventListener('pointerup', release);
+        btn.addEventListener('pointerleave', release);
+        btn.addEventListener('pointercancel', release);
+    };
+    bindMove('move-left-btn', 'left');
+    bindMove('move-right-btn', 'right');
 
     // Перевіряємо чи вже є активна сесія
     if (supabaseClient) {
@@ -1681,7 +1706,7 @@ class MainScene extends Phaser.Scene {
     create() {
         this.score = 0;
         this.gameOver = false;
-        this.gameSpeed = 1.7;
+        this.gameSpeed = 1.4;
         this.lastWasDog = false;
         this.lollipopCount = 0;
         this.superJumps = 0;
@@ -1689,7 +1714,7 @@ class MainScene extends Phaser.Scene {
         this.dreamMode = false;
         this.dreamSpawned = false;
         this.dreamMusic = null;
-        this.mriyaNextThreshold = 1000; // Наступна Мрія через 1000 очок
+        this.mriyaNextThreshold = 1200; // Наступна Мрія через 1200 очок
 
         // Фіксовані константи ігрового поля (540×960 — портрет)
         this.GW = 540;
@@ -1716,7 +1741,7 @@ class MainScene extends Phaser.Scene {
         this.clouds = this.add.group();
         for(let i=0; i<5; i++) {
             let cloud = this.add.image(Phaser.Math.Between(-50, this.GW + 50), Phaser.Math.Between(15, this.GH * 0.2), 'cloud');
-            cloud.setScale(0.5 + Math.random() * 1.0);
+            cloud.setScale(1.0 + Math.random() * 2.0);
             cloud.setAlpha(0.5 + Math.random() * 0.5);
             this.clouds.add(cloud);
         }
@@ -1728,19 +1753,20 @@ class MainScene extends Phaser.Scene {
             let x = i * spacing + Phaser.Math.Between(0, 30);
             let tree = this.add.image(x, this.groundY, 'tree');
             tree.setOrigin(0.5, 1);
-            let scale = 0.5 + Math.random() * 0.8;
+            let scale = 1.0 + Math.random() * 1.6;
             tree.setScale(scale);
             tree.setAlpha(0.3 + Math.random() * 0.4);
             this.trees.add(tree);
         }
 
-        // Земля в неоновом стиле
-        this.ground = this.add.rectangle(this.GW / 2, this.groundY + 20, this.GW, 40, 0x050510);
-        this.physics.add.existing(this.ground, true); 
-        this.ground.body.setSize(this.GW, 40);
+        // Земля — только визуал
+        this.add.rectangle(this.GW / 2, this.groundY + 20, this.GW, 40, 0x050510);
 
         // Линия неона сверху земли
         this.neonLine = this.add.rectangle(this.GW / 2, this.groundY, this.GW, 4, 0x00FFFF);
+
+        // Пол через world physics bounds — Мия не может упасть ниже groundY
+        this.physics.world.setBounds(0, 0, this.GW, this.groundY);
 
         // Анимации Мии и Собаки
         if (!this.anims.exists('run')) {
@@ -1770,21 +1796,29 @@ class MainScene extends Phaser.Scene {
             });
         }
 
-        // Игрок (Мия)
-        this.mia = this.physics.add.sprite(120, this.groundY - 48, 'mia0');
-        this.mia.setScale(1.1);
+        // Игрок (Мия) — спавним выше земли, она падает и приземляется физически
+        const miaScale = 2.2;
+        this.mia = this.physics.add.sprite(120, this.groundY - 250, 'mia0');
+        this.mia.setOrigin(0.5, 1);
+        this.mia.setScale(miaScale);
+        this.mia.setAlpha(1);
         this.mia.play('run');
         this.miaReady = false;
-        
+
         this.mia.setGravityY(2300);
-        this.mia.setCollideWorldBounds(true);
-        this.physics.add.collider(this.mia, this.ground, () => {
-            this.miaReady = true;
-        });
-        
-        // Хитбокс Мии (уменьшаем высоту хитбокса, чтобы не застревала при прыжке)
+        this.mia.setBounce(0);
+        this.mia.setCollideWorldBounds(true); // пол = world bounds bottom = groundY
+
+        // Хитбокс Мії — в пікселях ТЕКСТУРИ (Phaser сам множить на scale спрайта).
+        // Текстура 24×48; body 14×32 в нижній частині (ноги на самому низу спрайта).
         this.mia.body.setSize(14, 32);
         this.mia.body.setOffset(5, 16);
+
+        // miaReady=true когда приземлилась
+        this.time.addEvent({
+            delay: 600,
+            callback: () => { this.miaReady = true; }
+        });
 
         // Группы (В Phaser 3.60+ используем обычные группы, а не физические, во избежание дёргания координат)
         this.obstacles = this.add.group();
@@ -1822,16 +1856,16 @@ class MainScene extends Phaser.Scene {
         };
 
         // Счётчики
-        this.scoreText = this.add.text(20, 20, 'Очки: 0', { fontSize: '24px', fill: '#FFF', fontStyle: 'bold' });
+        this.scoreText = this.add.text(20, 60, 'Очки: 0', { fontSize: '32px', fill: '#FFF', fontStyle: 'bold' });
         this.scoreText.setShadow(2, 2, '#000', 4);
 
-        // Відображення життів (на canvas)
-        this.livesText = this.add.text(this.GW / 2, 20, '', { fontSize: '22px', fill: '#FF3366', fontStyle: 'bold' });
-        this.livesText.setOrigin(0.5, 0);
+        // Відображення життів (на canvas) - в левом верхнем углу
+        this.livesText = this.add.text(20, 20, '', { fontSize: '32px', fill: '#FF3366', fontStyle: 'bold' });
+        this.livesText.setOrigin(0, 0);
         this.livesText.setShadow(2, 2, '#000', 4);
         this.updateLivesDisplay();
 
-        this.superJumpText = this.add.text(20, 50, 'Суперстрибок: 0', { fontSize: '18px', fill: '#AAFF00', fontStyle: 'bold' });
+        this.superJumpText = this.add.text(20, 100, 'Суперстрибок: 0', { fontSize: '24px', fill: '#AAFF00', fontStyle: 'bold' });
         this.superJumpText.setShadow(2, 2, '#000', 4);
 
         // Анимация пульсации всей области суперпрыжков
@@ -1854,7 +1888,10 @@ class MainScene extends Phaser.Scene {
             fairyBonus: 0
         };
         this.collectedOrder = []; // Очередь собранных предметов
-        this.startIconX = 24; // Начальная точка
+        this.startIconX = 24; // Начальная точка (сдвигаем выше текста суперстрибка) под суперстрибком
+
+        // Трекінг звичайних зібраних предметів за типом (для екрану фіналу)
+        this.regularCollected = { star: 0, heart: 0, flower: 0 };
 
         console.log("TEST MONITOR: Game scene initialized. Activating listeners trace.");
         this.events.once('shutdown', () => {
@@ -1882,8 +1919,13 @@ class MainScene extends Phaser.Scene {
     update(time) {
         if (this.gameOver) return;
 
-        this.gameSpeed += 0.00005; // Замедлил ускорение в 2 раза
+        this.gameSpeed += 0.00003; // Более плавное ускорение
         let groundSpeed = this.gameSpeed;
+
+        // Центр Мії по Y (origin у Мії = ноги, тому для коллізій беремо середину тіла)
+        const miaCenterY = this.mia.y - this.mia.displayHeight / 2;
+        // Чи Мія в повітрі (предмети можна збирати лише у стрибку)
+        const miaAirborne = !this.mia.body.touching.down && !this.mia.body.blocked.down;
 
         // Скролл фона
         this.clouds.getChildren().forEach(c => {
@@ -1897,12 +1939,12 @@ class MainScene extends Phaser.Scene {
             if (t.x < -100) t.x = this.GW + 100;
         });
 
-        // Управление позицией Мии
-        if (this.cursors.left.isDown) this.mia.setVelocityX(-200);
-        else if (this.cursors.right.isDown) this.mia.setVelocityX(200);
-        else {
-            this.mia.setVelocityX(0); // ИСПРАВЛЕНИЕ: Убрал авто-движение влево
-        }
+        // Управление позицией Мии (клавіатура + екранні кнопки)
+        const wantLeft = this.cursors.left.isDown || window._miaMove === 'left';
+        const wantRight = this.cursors.right.isDown || window._miaMove === 'right';
+        if (wantLeft) this.mia.setVelocityX(-260);
+        else if (wantRight) this.mia.setVelocityX(260);
+        else this.mia.setVelocityX(0);
 
         // Анимация прыжка/бега
         if (!this.mia.body.touching.down && !this.mia.body.blocked.down) {
@@ -1929,7 +1971,7 @@ class MainScene extends Phaser.Scene {
             }
 
             // Проверка столкновения
-            if (Math.abs(this.mia.x - obs.x) < 20 && Math.abs(this.mia.y - obs.y) < 30) {
+            if (Math.abs(this.mia.x - obs.x) < 26 && Math.abs(miaCenterY - obs.y) < 45) {
                 this.hitObstacle();
                 break;
             }
@@ -1943,15 +1985,19 @@ class MainScene extends Phaser.Scene {
             if (this.gameOver) break; // Выходим сразу, если игра окончена
             let item = collectArray[i];
             
-            // Рух "Мрії" в 2 рази повільніше
+            // Рух "Мрії" — швидше ще на 30% (0.8 → 1.04)
             if (item.getData('dream')) {
-                item.x -= groundSpeed * 0.5;
+                item.x -= groundSpeed * 1.04;
             } else {
                 item.x -= groundSpeed;
             }
 
-            // Проверка сбора
-            if (Math.abs(this.mia.x - item.x) < 22 && Math.abs(this.mia.y - item.y) < 25) {
+            // Проверка сбора — лише в стрибку (предмети недоступні без стрибка).
+            // Враховуємо реальний розмір предмета (displayWidth/Height) + півширини тіла Мії,
+            // щоб не проскакувати повз на швидкості.
+            const hitX = item.displayWidth / 2 + this.mia.displayWidth * 0.5 + 6;
+            const hitY = item.displayHeight / 2 + this.mia.displayHeight * 0.55 + 6;
+            if (miaAirborne && Math.abs(this.mia.x - item.x) < hitX && Math.abs(miaCenterY - item.y) < hitY) {
                 this.collectItem(item);
                 continue;
             }
@@ -1978,7 +2024,7 @@ class MainScene extends Phaser.Scene {
             // Проверка сбора птицы с учётом размера
             const birdHitX = Math.max(25, bird.displayWidth * 0.42);
             const birdHitY = Math.max(25, bird.displayHeight * 0.42);
-            if (Math.abs(this.mia.x - bird.x) < birdHitX && Math.abs(this.mia.y - bird.y) < birdHitY) {
+            if (Math.abs(this.mia.x - bird.x) < birdHitX && Math.abs(miaCenterY - bird.y) < birdHitY) {
                 this.collectBird(bird);
                 continue;
             }
@@ -1993,7 +2039,7 @@ class MainScene extends Phaser.Scene {
 
             const hitX = Math.max(26, item.displayWidth * 0.45);
             const hitY = Math.max(26, item.displayHeight * 0.45);
-            if (Math.abs(this.mia.x - item.x) < hitX && Math.abs(this.mia.y - item.y) < hitY) {
+            if (Math.abs(this.mia.x - item.x) < hitX && Math.abs(miaCenterY - item.y) < hitY) {
                 this.collectSuperItem(item);
                 return;
             }
@@ -2011,7 +2057,7 @@ class MainScene extends Phaser.Scene {
             const rainArray = this.rainItems.getChildren().slice();
             for (let i = rainArray.length - 1; i >= 0; i--) {
                 let rItem = rainArray[i];
-                if (Math.abs(this.mia.x - rItem.x) < 24 && Math.abs(this.mia.y - rItem.y) < 32) {
+                if (Math.abs(this.mia.x - rItem.x) < 40 && Math.abs(miaCenterY - rItem.y) < 50) {
                     this.collectItem(rItem);
                 }
             }
@@ -2052,13 +2098,13 @@ class MainScene extends Phaser.Scene {
         if (this.lastWasDog) {
             // Пропускаем собаку, равномерно распределяем остальные
             let r = Math.random();
-            if (r > 0.66 && this.lollipopCount < 2) key = 'lollipop';
-            else if (r > 0.33) key = 'mushroom';
+            if (r > 0.64 && this.lollipopCount < 2) key = 'lollipop';
+            else if (r > 0.34) key = 'mushroom';
             else key = 'bush';
         } else {
-            if (rand > 0.78) { key = 'dog0'; }
-            else if (rand > 0.55 && this.lollipopCount < 2) key = 'lollipop';
-            else if (rand > 0.25) key = 'mushroom';
+            if (rand > 0.82) { key = 'dog0'; }
+            else if (rand > 0.58 && this.lollipopCount < 2) key = 'lollipop';
+            else if (rand > 0.28) key = 'mushroom';
         }
 
         // Сбрасываем счётчик, если не леденец; иначе увеличиваем
@@ -2067,16 +2113,20 @@ class MainScene extends Phaser.Scene {
         else this.lollipopCount = 0;
 
         // Идеальное позиционирование Y относительно поверхности земли
-        // Куст (36x36) -> центр y = groundY - 18
-        // Гриб (32x38) -> y = groundY - 19
-        // Леденец (34x48) -> y = groundY - 24
-        // Собака (42x32) -> y = groundY - 16
-        let spawnY = this.groundY - 18;
-        if (key === 'mushroom') spawnY = this.groundY - 19;
-        if (key === 'lollipop') spawnY = this.groundY - 24;
-        if (key.includes('dog')) spawnY = this.groundY - 16;
+        // С учётом масштаба 2.0:
+        // Куст (36x36 * 2 = 72x72) -> центр y = groundY - 36
+        // Гриб (32x38 * 2 = 64x76) -> y = groundY - 38
+        // Леденец (34x48 * 2 = 68x96) -> y = groundY - 48
+        // Собака (42x32 * 2 = 84x64) -> y = groundY - 32
+        let spawnY = this.groundY - 36;
+        if (key === 'mushroom') spawnY = this.groundY - 38;
+        if (key === 'lollipop') spawnY = this.groundY - 48;
+        if (key.includes('dog')) spawnY = this.groundY - 32;
 
         let obs = this.add.sprite(this.spawnX, spawnY, key);
+        
+        // Увеличиваем все препятствия в 2 раза
+        obs.setScale(2.0);
 
         if (key.includes('dog')) {
             obs.flipX = true; // Мордой к Мие (влево)
@@ -2135,22 +2185,27 @@ class MainScene extends Phaser.Scene {
         if (this.gameOver || this.dreamSpawned) return;
         this.dreamSpawned = true;
 
-        const y = Phaser.Math.Between(this.groundY - 169, this.groundY - 150); // Потрібен суперстрибок
+        const y = Phaser.Math.Between(this.groundY - 200, this.groundY - 165); // в зоні стрибка
         const item = this.add.sprite(this.spawnX, y, 'dream');
-        item.setScale(1.3 * 0.7);
+        item.setScale(1.3 * 1.4);
         item.setData('dream', true);
 
-        // Візуалізація: миготіння та ефект хвоста (частинки)
-        this.tweens.add({ targets: item, alpha: { from: 1, to: 0.3 }, duration: 200, yoyo: true, repeat: -1 });
+        // Бірюзове сяйво навколо предмета
+        item.setTint(0x66FFE0);
+        try { item.postFX.addGlow(0x00FFD0, 6, 0, false, 0.1, 16); } catch (e) {}
+        this.tweens.add({ targets: item, scale: { from: 1.3 * 1.4, to: 1.3 * 1.7 }, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.easeInOut' });
 
-        // Частинки для "хвоста" - ЗМЕНШЕНО ЧАСТОТУ (200мс замість 50мс)
+        // Миготіння
+        this.tweens.add({ targets: item, alpha: { from: 1, to: 0.45 }, duration: 260, yoyo: true, repeat: -1 });
+
+        // Бірюзові іскри-хвіст (частіше)
         this.time.addEvent({
-            delay: 200,
+            delay: 55,
             loop: true,
             callback: () => {
                 if (item.active) {
-                    this.emitter.particleTint = 0xFFD700;
-                    this.emitter.explode(1, item.x, item.y);
+                    this.emitter.particleTint = 0x00FFD0;
+                    this.emitter.explode(7, item.x + Phaser.Math.Between(-18, 18), item.y + Phaser.Math.Between(-18, 18));
                 }
             }
         });
@@ -2178,10 +2233,10 @@ class MainScene extends Phaser.Scene {
         // Музыка
         this.playBuffer('dreamMusic', 0.5);
 
-        // Текст "Мечта!"
-        const dreamText = this.add.text(this.GW / 2, 80, 'Мрія! ✨', {
+        // Текст "Мечта!" — по центру екрану, нижче HUD
+        const dreamText = this.add.text(this.GW / 2, this.GH * 0.4, 'Мрія! ✨', {
             fontSize: '42px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setShadow(4, 4, '#FFAA00', 8);
+        }).setOrigin(0.5).setShadow(4, 4, '#FFAA00', 8).setDepth(50);
         this.tweens.add({ targets: dreamText, alpha: 0.3, yoyo: true, repeat: -1, duration: 600 });
 
         // Дождь предметов — спавним каждые 250ms
@@ -2211,13 +2266,18 @@ class MainScene extends Phaser.Scene {
         const key = Phaser.Utils.Array.GetRandom(allTypes);
         const x = Phaser.Math.Between(50, this.GW - 50);
         const isSuper = ['megaComet', 'energyVitamin', 'angelHeart', 'rainbowCrystal', 'fairyBonus'].includes(key);
+        const fallsToFloor = isSuper || key === 'vitamin'; // предмет суперстрибка теж падає на підлогу
 
         let item;
-        if (isSuper) {
+        if (fallsToFloor) {
             item = this.add.image(x, -40, key);
-            item.setData('superItem', true);
-            const pts = { megaComet: 250, energyVitamin: 150, angelHeart: 300, rainbowCrystal: 500, fairyBonus: 1000 };
-            item.setData('points', pts[key] || 100);
+            if (key === 'vitamin') {
+                item.setData('bonus', 'superjump');
+            } else {
+                item.setData('superItem', true);
+                const pts = { megaComet: 250, energyVitamin: 150, angelHeart: 300, rainbowCrystal: 500, fairyBonus: 1000 };
+                item.setData('points', pts[key] || 100);
+            }
             // Супер-предмети падають на землю
             const targetY = this.groundY - 24;
             this.tweens.add({
@@ -2257,7 +2317,7 @@ class MainScene extends Phaser.Scene {
             });
         }
 
-        item.setScale(Phaser.Math.FloatBetween(0.6, 1.2));
+        item.setScale(Phaser.Math.FloatBetween(1.2, 2.4));
 
         // Вращение
         this.tweens.add({
@@ -2303,13 +2363,19 @@ class MainScene extends Phaser.Scene {
     spawnBird() {
         if (this.gameOver) return;
 
+        // У 2 рази менше птахів — половину спавнів замінюємо на звичайний предмет
+        if (Math.random() < 0.5) {
+            this.spawnCollectible();
+            return;
+        }
+
         const sizeRoll = Math.random();
         let birdScale = 1.0;
         let birdPoints = 20;
         let y = Phaser.Math.Between(this.groundY - 140, this.groundY - 95);
 
         if (sizeRoll > 0.82) {
-            birdScale = 1.35;
+            birdScale = 1.1;
             birdPoints = 80;
             y = Phaser.Math.Between(this.groundY - 165, this.groundY - 120);
         } else if (sizeRoll > 0.55) {
@@ -2323,7 +2389,7 @@ class MainScene extends Phaser.Scene {
         }
 
         let bird = this.add.sprite(this.spawnX, y, 'bird0');
-        bird.setScale(birdScale);
+        bird.setScale(birdScale * 2);
         bird.setFlipX(false);
         bird.play('birdFly');
         bird.setData('points', birdPoints);
@@ -2337,7 +2403,7 @@ class MainScene extends Phaser.Scene {
 
         let rand = Math.random();
         
-        if (rand > 0.60) {
+        if (rand > 0.65) {
             let y = Phaser.Math.Between(this.groundY - 136, this.groundY - 64);
             let vitamin = this.add.sprite(this.spawnX, y, 'vitamin');
             vitamin.setData('bonus', 'superjump');
@@ -2350,13 +2416,13 @@ class MainScene extends Phaser.Scene {
         // Бонусы на разной, но досягаемой высоте прыжка
         let key = 'star';
         if (rand > 0.6) key = 'heart';
-        else if (rand > 0.3) key = 'flower';
+        else if (rand > 0.35) key = 'flower';
 
-        // Высота прыжка: Мия стабильно достаёт около 80-120px от земли
+        // Тільки в зоні стрибка — з підлоги дістати не можна (мін. ~95px над землею)
         let y;
-        if (key === 'star') y = Phaser.Math.Between(this.groundY - 130, this.groundY - 85);
-        else if (key === 'heart') y = Phaser.Math.Between(this.groundY - 80, this.groundY - 40);
-        else y = Phaser.Math.Between(this.groundY - 110, this.groundY - 60);
+        if (key === 'star') y = Phaser.Math.Between(this.groundY - 150, this.groundY - 115);
+        else if (key === 'heart') y = Phaser.Math.Between(this.groundY - 135, this.groundY - 100);
+        else y = Phaser.Math.Between(this.groundY - 145, this.groundY - 105);
 
         let item = this.add.sprite(this.spawnX, y, key);
 
@@ -2377,14 +2443,14 @@ class MainScene extends Phaser.Scene {
         // Создаем иконку, если ещё нет
         if (!this.superItemIcons[collectedKey]) {
             this.collectedOrder.push(collectedKey);
-            const x = this.startIconX + (this.collectedOrder.length - 1) * 36;
-            const y = 120;
-            const icon = this.add.sprite(x, y, collectedKey).setScale(0.5);
-            const countText = this.add.text(x + 12, y - 8, String(this.superItemsCollected[collectedKey]), { fontSize: '14px', fill: '#FFFFFF', fontStyle: 'bold' });
+            const x = this.startIconX + (this.collectedOrder.length - 1) * 60;
+            const y = 160;
+            const icon = this.add.sprite(x, y, collectedKey).setScale(0.8);
+            const countText = this.add.text(x + 20, y - 12, String(this.superItemsCollected[collectedKey]), { fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold' });
             countText.setShadow(2, 2, '#000', 4);
             // Анимация появления
             icon.setScale(0);
-            this.tweens.add({ targets: icon, scale: 0.5, duration: 300, ease: 'Back.easeOut' });
+            this.tweens.add({ targets: icon, scale: 0.8, duration: 300, ease: 'Back.easeOut' });
             this.tweens.add({ targets: icon, angle: { from: -20, to: 20 }, yoyo: true, repeat: 2, duration: 100 });
             this.superItemIcons[collectedKey] = icon;
             this.superItemCountTexts[collectedKey] = countText;
@@ -2397,8 +2463,8 @@ class MainScene extends Phaser.Scene {
             const icon = this.superItemIcons[collectedKey];
             if (icon) {
                 this.tweens.killTweensOf(icon);
-                icon.setScale(0.5);
-                this.tweens.add({ targets: icon, scale: 0.8, yoyo: true, duration: 200 });
+                icon.setScale(0.8);
+                this.tweens.add({ targets: icon, scale: 1.2, yoyo: true, duration: 200 });
                 this.tweens.add({ targets: icon, angle: { from: -20, to: 20 }, yoyo: true, repeat: 2, duration: 100 });
             }
         }
@@ -2496,6 +2562,7 @@ class MainScene extends Phaser.Scene {
             let color = key === 'heart' ? 0xFF1493 : (key === 'flower' ? 0xFF00FF : 0xFFFF00);
             this.burstParticles(12, item.x, item.y, color);
             item.destroy();
+            if (this.regularCollected[key] !== undefined) this.regularCollected[key]++;
             this.score += pts;
             this.scoreText.setText('Очки: ' + this.score);
             return;
@@ -2512,6 +2579,7 @@ class MainScene extends Phaser.Scene {
         
         const pts = key === 'heart' ? 25 : (key === 'flower' ? 15 : 10);
         this.totalRegularItems += 1;
+        if (this.regularCollected[key] !== undefined) this.regularCollected[key]++;
         this.showFloatingScore(pts, item.x, item.y);
 
         let color = key === 'heart' ? 0xFF1493 : (key === 'flower' ? 0xFF00FF : 0xFFFF00);
@@ -2539,8 +2607,27 @@ class MainScene extends Phaser.Scene {
         this.scoreText.setText('Очки: ' + this.score);
     }
 
+    stopAllSounds() {
+        // Обриваємо всі запущені звуки (напр. звук супер-предмета), окрім нових,
+        // які заграють після зіткнення
+        if (this.audioBuffers) {
+            Object.values(this.audioBuffers).forEach(a => {
+                try { a.pause(); a.currentTime = 0; } catch (e) {}
+            });
+        }
+        // Синтезовані звуки (супер-предмет, бонуси) — обриваємо, закривши контекст;
+        // він пересоздасться при наступному playSynthSound
+        if (this.synthCtx) {
+            try { this.synthCtx.close(); } catch (e) {}
+            this.synthCtx = null;
+        }
+    }
+
     hitObstacle() {
         if (this.gameOver) return;
+
+        // Обриваємо всі звуки, що звучали до зіткнення
+        this.stopAllSounds();
 
         // Если в режиме Мечты — выключаем его
         if (this.dreamMode) {
@@ -2554,18 +2641,33 @@ class MainScene extends Phaser.Scene {
 
         if (this.lives > 0) {
             this.playBuffer('ohno', 0.7);
-            // Показуємо повідомлення про втрату життя
+            // Показуємо повідомлення про втрату життя (глубже, под иконками)
             const msgText = this.add.text(this.GW / 2, this.GH * 0.25, this.playerName + ', у тебе залишилось ' + this.lives + ' життя!', {
-                fontSize: '24px', fill: '#FF3366', fontStyle: 'bold', align: 'center',
+                fontSize: '36px', fill: '#FF3366', fontStyle: 'bold', align: 'center',
                 backgroundColor: '#000', padding: { x: 16, y: 10 },
                 wordWrap: { width: this.GW - 60 }
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setDepth(95);
             msgText.setShadow(3, 3, '#000', 6);
 
             this.physics.pause();
             this.gameOver = true;
-            this.mia.setTint(0xff0000);
             this.mia.anims.stop();
+
+            // Ефект удару: миготіння Мії + зірочки навколо (замість червоної заливки)
+            this.mia.clearTint();
+            const blink = this.tweens.add({
+                targets: this.mia,
+                alpha: { from: 1, to: 0.25 },
+                duration: 110,
+                yoyo: true,
+                repeat: 6
+            });
+            // Зірочки/іскри розлітаються
+            const cx = this.mia.x, cy = this.mia.y - this.mia.displayHeight / 2;
+            this.emitter.particleTint = 0xFFFFFF;
+            this.emitter.explode(14, cx, cy);
+            this.emitter.particleTint = 0xFFE45C;
+            this.emitter.explode(14, cx, cy);
 
             // Видаляємо всі перешкоди, щоб не було повторного зіткнення після відновлення
             this.obstacles.clear(true, true);
@@ -2575,7 +2677,9 @@ class MainScene extends Phaser.Scene {
             const rs = () => {
                 if (this.scene.isActive()) {
                     this.gameOver = false;
+                    blink.stop();
                     this.mia.clearTint();
+                    this.mia.setAlpha(1);
                     this.physics.resume();
                     msgText.destroy();
                     // Видаляємо всі перешкоди, щоб не було повторного зіткнення
@@ -2584,7 +2688,9 @@ class MainScene extends Phaser.Scene {
                     this.collectibles.getChildren().forEach(c => {
                         if (c.getData && c.getData('dream')) c.destroy();
                     });
+                    // Дозволяємо Мрії з'явитися знову незабаром після втрати життя
                     this.dreamSpawned = false;
+                    this.mriyaNextThreshold = this.score + 300;
                 }
             };
             this.time.delayedCall(1500, rs);
@@ -2592,8 +2698,12 @@ class MainScene extends Phaser.Scene {
             // Гра завершена
             this.physics.pause();
             this.gameOver = true;
-            this.mia.setTint(0xff0000);
+            document.getElementById('touch-controls').classList.remove('active');
+            window._miaMove = null;
             this.mia.anims.stop();
+            this.mia.setTint(0x99bbff); // м'який блакитний замість червоного
+            this.emitter.particleTint = 0xFFFFFF;
+            this.emitter.explode(20, this.mia.x, this.mia.y - this.mia.displayHeight / 2);
             // Очищаємо всі активні об'єкти, щоб не заважали
             this.obstacles.clear(true, true);
             this.collectibles.clear(true, true);
@@ -2603,155 +2713,114 @@ class MainScene extends Phaser.Scene {
             this.playBuffer('finalSound', 0.7);
             if (currentPlayer) submitScore(this.score);
 
-            // Підрахунок усіх зібраних предметів
-            const collectedKeys = [];
-            let totalSuperItems = 0;
-            if (this.superItemsCollected) {
-                Object.keys(this.superItemsCollected).forEach(key => {
-                    const count = this.superItemsCollected[key];
-                    if (count > 0) {
-                        totalSuperItems += count;
-                        collectedKeys.push({ key, count });
-                    }
-                });
-            }
+            // ── Збираємо ВСІ зібрані предмети в один список ──
+            const allCollected = [];
+            ['star', 'heart', 'flower'].forEach(k => {
+                if (this.regularCollected[k] > 0) allCollected.push({ key: k, count: this.regularCollected[k] });
+            });
+            Object.keys(this.superItemsCollected).forEach(k => {
+                if (this.superItemsCollected[k] > 0) allCollected.push({ key: k, count: this.superItemsCollected[k] });
+            });
+            if (this.totalBirds > 0) allCollected.push({ key: 'bird0', count: this.totalBirds });
 
             const centerX = this.GW / 2;
-            const isPortrait = this.GH > this.GW;
 
             // Затемнення всього екрану
-            const overlay = this.add.rectangle(centerX, this.GH / 2, this.GW, this.GH, 0x000000, 0.75);
-            overlay.setOrigin(0.5);
-            overlay.setDepth(100);
+            this.add.rectangle(centerX, this.GH / 2, this.GW, this.GH, 0x05010a, 0.88)
+                .setOrigin(0.5).setDepth(100);
 
-            // Розраховуємо розмір панелі та позиції елементів динамічно
-            const borderPad = isPortrait ? 20 : 80;
-            const panelW = Math.min(560, this.GW - borderPad * 2);
-            const panelX = centerX;
+            // ── Метрики розкладки ──
+            const iconsPerRow = 4;
+            const cellW = 86;
+            const iconRowH = 62;
+            const rows = allCollected.length > 0 ? Math.ceil(allCollected.length / iconsPerRow) : 0;
+
+            const padTop = 34;
+            const titleGap = 52;
+            const nameGap = 40;
+            const scoreGap = 60;
+            const labelGap = allCollected.length > 0 ? 34 : 0;
+            const iconsGap = rows * iconRowH;
+            const btnGap = 84;
+
+            const panelW = Math.min(450, this.GW - 36);
+            const panelH = padTop + titleGap + nameGap + scoreGap + labelGap + iconsGap + btnGap;
+
             const panelY = this.GH / 2;
+            const panelTop = panelY - panelH / 2;
+            const panelLeft = centerX - panelW / 2;
 
-            // Починаємо з верхнього краю панелі + відступ
-            const padTop = 20;
-            let lineY = panelY - 170 + padTop;
+            // ── Скруглена неонова панель (Graphics) ──
+            const g = this.add.graphics().setDepth(101);
+            g.fillStyle(0x0a0420, 0.97);
+            g.fillRoundedRect(panelLeft, panelTop, panelW, panelH, 22);
+            g.lineStyle(3, 0x00ffff, 0.9);
+            g.strokeRoundedRect(panelLeft, panelTop, panelW, panelH, 22);
+            // Внутрішня рожева лінія для глибини
+            g.lineStyle(1, 0xff33aa, 0.5);
+            g.strokeRoundedRect(panelLeft + 6, panelTop + 6, panelW - 12, panelH - 12, 18);
+            this.tweens.add({ targets: g, alpha: { from: 1, to: 0.82 }, yoyo: true, repeat: -1, duration: 1400 });
+
+            let cy = panelTop + padTop;
 
             // Заголовок
-            const titleText = this.add.text(panelX, lineY, 'Гра закінчилася!', {
-                fontSize: isPortrait ? '24px' : '32px',
-                fill: '#FF3366',
-                fontStyle: 'bold',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5).setShadow(3, 3, '#000', 6).setDepth(103);
-            lineY += 32;
+            this.add.text(centerX, cy, 'Гра закінчилася!', {
+                fontSize: '30px', fill: '#FF3366', fontStyle: 'bold', fontFamily: 'Arial'
+            }).setOrigin(0.5, 0).setShadow(3, 3, '#000', 6).setDepth(103);
+            cy += titleGap;
 
             // Ім'я гравця
-            this.add.text(panelX, lineY, this.playerName, {
-                fontSize: '14px',
-                fill: '#AAAAAA',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(103);
-            lineY += 24;
-
-            // Іконки супер-предметів з кількістю
-            const iconSize = 30;
-            const maxIconsPerRow = isPortrait ? 3 : 5;
-            const iconRows = [];
-            if (collectedKeys.length > 0) {
-                const rowCount = Math.ceil(collectedKeys.length / maxIconsPerRow);
-                collectedKeys.forEach((item, i) => {
-                    const currentRow = Math.floor(i / maxIconsPerRow);
-                    const totalInRow = Math.min(maxIconsPerRow, collectedKeys.length - currentRow * maxIconsPerRow);
-                    const rowStartX = panelX - (totalInRow * iconSize) / 2;
-                    const col = i % maxIconsPerRow;
-                    const ix = rowStartX + col * iconSize + iconSize / 2;
-                    const iy = lineY + currentRow * 26;
-
-                    this.add.image(ix, iy, item.key).setScale(0.4).setDepth(103);
-                    this.add.text(ix + 10, iy - 4, 'x' + item.count, {
-                        fontSize: '12px',
-                        fill: '#FFFFFF',
-                        fontStyle: 'bold'
-                    }).setOrigin(0, 0.5).setShadow(1, 1, '#000', 3).setDepth(103);
-
-                    if (!iconRows[currentRow]) iconRows[currentRow] = 0;
-                    iconRows[currentRow]++;
-                });
-                lineY += iconRows.length * 26 + 4;
-            }
+            this.add.text(centerX, cy, this.playerName, {
+                fontSize: '20px', fill: '#FF99DD', fontFamily: 'Arial'
+            }).setOrigin(0.5, 0).setDepth(103);
+            cy += nameGap;
 
             // Очки
-            this.add.text(panelX, lineY, 'Очки: ' + this.score, {
-                fontSize: '22px',
-                fill: '#00FFFF',
-                fontStyle: 'bold',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5).setShadow(3, 3, '#000', 6).setDepth(103);
-            lineY += 28;
+            this.add.text(centerX, cy, 'Очки: ' + this.score, {
+                fontSize: '40px', fill: '#00FFFF', fontStyle: 'bold'
+            }).setOrigin(0.5, 0).setShadow(2, 2, '#000', 5).setDepth(103);
+            cy += scoreGap;
 
-            // Статистика
-            this.add.text(panelX, lineY, '🐦 ' + this.totalBirds + '   ⭐ ' + this.totalRegularItems, {
-                fontSize: '13px',
-                fill: '#CCCCCC',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(103);
-            lineY += 28;
+            // ── Зібрані предмети ──
+            if (allCollected.length > 0) {
+                this.add.text(centerX, cy, 'Зібрано:', {
+                    fontSize: '16px', fill: '#FFAA33', fontStyle: 'bold'
+                }).setOrigin(0.5, 0).setDepth(103);
+                cy += labelGap;
 
-            // Кнопка "Спробувати знову"
-            const restartBtnBg = this.add.rectangle(panelX, lineY, 210, 40);
-            restartBtnBg.setFillStyle(0x003344, 0.6);
-            restartBtnBg.setStrokeStyle(2, 0x00ffff, 0.9);
-            restartBtnBg.setDepth(103);
+                allCollected.forEach((it, i) => {
+                    const row = Math.floor(i / iconsPerRow);
+                    const inRow = Math.min(iconsPerRow, allCollected.length - row * iconsPerRow);
+                    const rowStartX = centerX - (inRow * cellW) / 2 + cellW / 2;
+                    const col = i % iconsPerRow;
+                    const ix = rowStartX + col * cellW;
+                    const iy = cy + row * iconRowH + 24;
 
-            const restartText = this.add.text(panelX, lineY, 'Спробувати знову', {
-                fontSize: '16px',
-                fill: '#00FFFF',
-                fontStyle: 'bold',
-                fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(104);
+                    const icon = this.add.image(ix - 12, iy, it.key).setDepth(103);
+                    const sc = 36 / Math.max(icon.width, icon.height);
+                    icon.setScale(sc);
+                    this.add.text(ix + 10, iy, '×' + it.count, {
+                        fontSize: '19px', fill: '#FFFFFF', fontStyle: 'bold'
+                    }).setOrigin(0, 0.5).setShadow(1, 1, '#000', 3).setDepth(103);
+                });
+                cy += iconsGap;
+            }
 
-            // Пульсація кнопки
-            this.tweens.add({
-                targets: [restartBtnBg, restartText],
-                alpha: 0.6,
-                yoyo: true,
-                repeat: -1,
-                duration: 800
-            });
-
-            // Підказка
-            const hintY = lineY + 32;
-            this.add.text(panelX, hintY, 'Натисни, щоб почати спочатку', {
-                fontSize: '11px',
-                fill: '#888888',
-                fontFamily: 'Arial'
+            // Кнопка рестарту — внизу панелі
+            const btnY = panelTop + panelH - 42;
+            const restartBtnBg = this.add.rectangle(centerX, btnY, 250, 54, 0x003344, 0.95);
+            restartBtnBg.setStrokeStyle(2, 0x00ffff, 1).setDepth(102);
+            const restartText = this.add.text(centerX, btnY, 'Спробувати знову', {
+                fontSize: '20px', fill: '#00FFFF', fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(103);
 
-            // Тепер визначаємо фактичну висоту панелі за вмістом
-            const contentTop = panelY - 170;
-            const contentBottom = hintY + 14;
-            const contentHeight = contentBottom - contentTop;
-            const panelH = Math.min(contentHeight + 20, this.GH - 80);
-            const newPanelY = (contentTop + contentBottom) / 2;
-
-            // Малюємо рамку ПІД текстом, але НАД затемненням (depth 101 та 102)
-            // Внутрішнє світіння рамки (зовні)
-            const glow = this.add.rectangle(panelX, newPanelY, panelW + 8, panelH + 8);
-            glow.setOrigin(0.5);
-            glow.setStrokeStyle(3, 0xff00ff, 0.4);
-            glow.setFillStyle(0x000000, 0);
-            glow.setDepth(101);
-
-            // Декоративна рамка
-            const frame = this.add.rectangle(panelX, newPanelY, panelW, panelH, 0x0a0a2e, 0.95);
-            frame.setOrigin(0.5);
-            frame.setStrokeStyle(2, 0x00ffff, 0.8);
-            frame.setDepth(102);
-
+            this.tweens.add({ targets: [restartBtnBg, restartText], alpha: 0.6, yoyo: true, repeat: -1, duration: 800 });
+            
             const restart = () => {
                 this.input.removeAllListeners();
                 this.input.keyboard.removeAllListeners();
                 this.tweens.killAll();
                 this.time.removeAllEvents();
-                // Повертаємось на стартовий екран замість scene.restart
                 if (window._game) {
                     window._game.destroy(true);
                     window._game = null;
@@ -2765,13 +2834,13 @@ class MainScene extends Phaser.Scene {
     }
 
     updateLivesDisplay() {
+        const hearts = ['💙', '💛', '💚'];
         if (this.livesText) {
-            this.livesText.setText('❤️ '.repeat(this.lives).trim());
-        }
-        // Оновлюємо HTML індикатор
-        const livesEl = document.getElementById('lives-display');
-        if (livesEl) {
-            livesEl.textContent = '❤️ '.repeat(this.lives).trim();
+            let heartsStr = '';
+            for (let i = 0; i < this.lives; i++) {
+                heartsStr += hearts[i] + ' ';
+            }
+            this.livesText.setText(heartsStr.trim());
         }
     }
 }
