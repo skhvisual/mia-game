@@ -231,77 +231,40 @@
             border-color: #00ffff;
         }
 
-        #leaderboard-panel {
+        #ui-container {
             position: fixed;
-            right: 14px;
-            top: max(14px, env(safe-area-inset-top, 14px));
+            right: 6px;
+            top: max(6px, env(safe-area-inset-top, 6px));
             z-index: 10;
-            width: min(200px, 30vw);
-            max-height: 70vh;
-            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: min(120px, 30vw);
+        }
+
+        #leaderboard-panel {
+            width: 100%;
+            padding: 8px;
             border: 1px solid rgba(0, 255, 255, 0.7);
-            border-radius: 16px;
+            border-radius: 12px;
             background: rgba(0, 0, 0, 0.72);
             color: #fff;
-            font-size: 13px;
+            font-size: 11px;
             display: none;
             overflow: hidden;
         }
-        @media (max-width: 600px) {
-            #leaderboard-panel {
-                width: min(140px, 28vw);
-                font-size: 11px;
-                padding: 8px;
-            }
-            #leaderboard-list {
-                font-size: 11px;
-            }
-            #lives-display {
-                font-size: 22px;
-                letter-spacing: 4px;
-            }
-            #player-bar {
-                font-size: 11px;
-                min-width: 120px;
-            }
-            .card {
-                padding: 24px 20px 20px;
-            }
-            .card h1 {
-                font-size: 28px;
-            }
-        }
-        #leaderboard-panel h3 {
-            margin: 0 0 8px;
-            text-align: center;
-            font-size: 14px;
-            color: #00ffff;
-        }
-        #leaderboard-list {
-            max-height: 48vh;
-            overflow-y: auto;
-            padding-left: 22px;
-            margin: 0;
-            font-size: 13px;
-        }
-        #leaderboard-list li {
-            padding: 3px 0;
-        }
 
         #player-bar {
-            position: fixed;
-            left: 14px;
-            bottom: max(14px, env(safe-area-inset-bottom, 14px));
-            z-index: 10;
-            display: none;
+            width: 100%;
+            padding: 6px;
             color: white;
             background: rgba(0,0,0,0.66);
             border: 1px solid rgba(255, 0, 255, 0.65);
-            border-radius: 14px;
-            padding: 6px 10px;
-            font-size: 12px;
-            min-width: 140px;
-            box-shadow: 0 0 18px rgba(255, 0, 255, 0.25);
+            border-radius: 12px;
+            font-size: 11px;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.25);
+            display: none;
+            box-sizing: border-box;
         }
         #player-bar button {
             width: 100%;
@@ -433,14 +396,16 @@
         </div>
     </div>
 
-    <div id="player-bar">
-        <div>Гравець: <b id="current-player-name">—</b></div>
-        <button id="logout-player-btn">Вийти</button>
-    </div>
+    <div id="ui-container">
+        <div id="player-bar">
+            <div>Гравець: <b id="current-player-name">—</b></div>
+            <button id="logout-player-btn">Вийти</button>
+        </div>
 
-    <div id="leaderboard-panel">
-        <h3>Топ-10</h3>
-        <ol id="leaderboard-list"></ol>
+        <div id="leaderboard-panel">
+            <h3>Топ-10</h3>
+            <ol id="leaderboard-list"></ol>
+        </div>
     </div>
 
     <div id="lives-display">❤️ ❤️ ❤️</div>
