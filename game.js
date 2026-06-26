@@ -1916,11 +1916,15 @@ class MainScene extends Phaser.Scene {
         audio.play().catch(e => console.warn('Audio play blocked:', e));
     }
 
-    update(time) {
+    update(time, delta) {
         if (this.gameOver) return;
 
-        this.gameSpeed += 0.00003; // Более плавное ускорение
-        let groundSpeed = this.gameSpeed;
+        // Коефіцієнт кадра: робить рух незалежним від FPS (на телефоні FPS нижчий).
+        // 16.6667мс = 1 кадр при 60fps. Обмежуємо, щоб лаг-спайки не телепортували об'єкти.
+        const f = Math.min((delta || 16.6667) / 16.6667, 3);
+
+        this.gameSpeed += 0.00003 * f; // Более плавное ускорение
+        let groundSpeed = this.gameSpeed * f;
 
         // Центр Мії по Y (origin у Мії = ноги, тому для коллізій беремо середину тіла)
         const miaCenterY = this.mia.y - this.mia.displayHeight / 2;
@@ -1929,13 +1933,13 @@ class MainScene extends Phaser.Scene {
 
         // Скролл фона
         this.clouds.getChildren().forEach(c => {
-            c.x -= this.gameSpeed * 0.4;
+            c.x -= this.gameSpeed * 0.4 * f;
             if (c.x < -120) { c.x = this.GW + 120; c.y = Phaser.Math.Between(15, this.GH * 0.2); }
         });
 
         // Деревья (скроллинг с эффектом параллакса)
         this.trees.getChildren().forEach(t => {
-            t.x -= this.gameSpeed * 0.25; 
+            t.x -= this.gameSpeed * 0.25 * f;
             if (t.x < -100) t.x = this.GW + 100;
         });
 
