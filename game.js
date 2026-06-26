@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.1';
+const GAME_VERSION = 'v2.2';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
