@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.6';
+const GAME_VERSION = 'v1.7';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -1712,7 +1712,7 @@ class MainScene extends Phaser.Scene {
     create() {
         this.score = 0;
         this.gameOver = false;
-        this.gameSpeed = 2.3; // базова швидкість (підвищена, щоб на 60fps не було повільно/скупчено)
+        this.gameSpeed = 4.0; // базова швидкість
         this.lastWasDog = false;
         this.lollipopCount = 0;
         this.superJumps = 0;
@@ -2363,7 +2363,7 @@ class MainScene extends Phaser.Scene {
         this.rainItems.clear(true, true);
 
         // Восстанавливаем скорость
-        this.gameSpeed = 2.6;
+        this.gameSpeed = 4.4;
 
         // Очищаем тексты
         this.children.getAll().forEach(child => {
