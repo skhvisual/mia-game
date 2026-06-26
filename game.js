@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.3';
+const GAME_VERSION = 'v1.4';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -302,6 +302,11 @@ function startGame() {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+    // Версію проставляє САМ game.js — мітка доводить, який код реально завантажено.
+    // Якщо тут "js v1.4 ✓", а рух не змінився — справа не в кеші, а в самій грі.
+    const vl = document.getElementById('version-label');
+    if (vl) vl.textContent = 'js ' + GAME_VERSION + ' ✓';
+
     // Крок 1: опрос — есть ли аккаунт
     document.getElementById('auth-have-account-btn').addEventListener('click', showLoginForm);
     document.getElementById('auth-no-account-btn').addEventListener('click', showRegisterForm);
