@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v1.8';
+const GAME_VERSION = 'v1.9';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -337,42 +337,67 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') startGame();
     });
 
-    // Кнопки керування Мією (вліво/вправо + свайп вгору = стрибок)
+    // Джойстик (вліво/вправо/вгору=стрибок) + кнопка стрибка
     window._miaMove = null;
     window._miaJumpRequest = false;
-    const SWIPE_UP_THRESHOLD = 35; // px свайпу вгору для стрибка
-    const bindMove = (id, dir) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        let startY = null;
-        let swiped = false;
-        const press = (e) => {
+
+    const joystick = document.getElementById('joystick-zone');
+    const knob     = document.getElementById('joystick-knob');
+    const jumpBtn  = document.getElementById('jump-btn');
+
+    if (joystick && knob) {
+        const RADIUS   = 29;  // max knob offset px
+        const H_DEAD   = 10;  // горизонтальний dead zone
+        const JUMP_THR = 28;  // свайп вгору для стрибка
+        let joyId = null, joyOriginX = 0, joyOriginY = 0, joyJumped = false;
+
+        joystick.addEventListener('pointerdown', e => {
             e.preventDefault();
-            window._miaMove = dir;
-            startY = e.clientY;
-            swiped = false;
-        };
-        const move = (e) => {
-            if (startY === null || swiped) return;
-            if (startY - e.clientY >= SWIPE_UP_THRESHOLD) {
-                swiped = true;
+            joyId = e.pointerId;
+            joyOriginX = e.clientX;
+            joyOriginY = e.clientY;
+            joyJumped = false;
+            joystick.setPointerCapture(e.pointerId);
+        });
+
+        joystick.addEventListener('pointermove', e => {
+            if (e.pointerId !== joyId) return;
+            const dx = e.clientX - joyOriginX;
+            const dy = e.clientY - joyOriginY;
+            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), RADIUS);
+            const angle = Math.atan2(dy, dx);
+            const kx = Math.cos(angle) * dist;
+            const ky = Math.sin(angle) * dist;
+            knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+
+            if (!joyJumped && joyOriginY - e.clientY >= JUMP_THR) {
+                joyJumped = true;
                 window._miaJumpRequest = true;
+                joyOriginY = e.clientY; // reset so repeated swipes work
             }
+
+            if (dx > H_DEAD)       window._miaMove = 'right';
+            else if (dx < -H_DEAD) window._miaMove = 'left';
+            else                   window._miaMove = null;
+        });
+
+        const joyEnd = e => {
+            if (e.pointerId !== joyId) return;
+            joyId = null;
+            window._miaMove = null;
+            joyJumped = false;
+            knob.style.transform = 'translate(-50%, -50%)';
         };
-        const release = (e) => {
+        joystick.addEventListener('pointerup',     joyEnd);
+        joystick.addEventListener('pointercancel', joyEnd);
+    }
+
+    if (jumpBtn) {
+        jumpBtn.addEventListener('pointerdown', e => {
             e.preventDefault();
-            if (window._miaMove === dir) window._miaMove = null;
-            startY = null;
-            swiped = false;
-        };
-        btn.addEventListener('pointerdown', press);
-        btn.addEventListener('pointermove', move);
-        btn.addEventListener('pointerup', release);
-        btn.addEventListener('pointerleave', release);
-        btn.addEventListener('pointercancel', release);
-    };
-    bindMove('move-left-btn', 'left');
-    bindMove('move-right-btn', 'right');
+            window._miaJumpRequest = true;
+        });
+    }
 
     // Перевіряємо чи вже є активна сесія
     if (supabaseClient) {
