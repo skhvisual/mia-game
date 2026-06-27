@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.9';
+const GAME_VERSION = 'v3.0';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -2053,7 +2053,7 @@ class MainScene extends Phaser.Scene {
         this.scoreText.setShadow(2, 2, '#000', 4);
 
         // Відображення життів (на canvas) - в левом верхнем углу
-        this.livesText = this.add.text(20, 20, '', { fontSize: '32px', fill: '#FF3366', fontStyle: 'bold' });
+        this.livesText = this.add.text(20, 44, '', { fontSize: '32px', fill: '#FF3366', fontStyle: 'bold' });
         this.livesText.setOrigin(0, 0);
         this.livesText.setShadow(2, 2, '#000', 4);
         this.updateLivesDisplay();
