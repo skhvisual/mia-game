@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.3';
+const GAME_VERSION = 'v2.4';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -44,24 +44,35 @@ function setAuthMessage(msg) {
     if (el) el.textContent = msg;
 }
 
+function showMainMenu() {
+    document.getElementById('main-menu').style.display = 'flex';
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-container').style.display = 'none';
+    document.getElementById('player-bar').style.display = 'none';
+    document.getElementById('touch-controls').classList.remove('active');
+    document.getElementById('gameover-overlay').style.display = 'none';
+    window._miaMove = null;
+}
+
 function showGameUI() {
+    document.getElementById('main-menu').style.display = 'none';
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'block';
-    document.getElementById('leaderboard-panel').style.display = 'block';
     document.getElementById('player-bar').style.display = 'block';
     document.getElementById('current-player-name').textContent = currentPlayer?.name || 'Гравець';
     document.getElementById('touch-controls').classList.add('active');
+    document.getElementById('gameover-overlay').style.display = 'none';
     window._miaMove = null;
-    // Telegram Mini App: show BackButton
     if (window.__tgBackButton) window.__tgBackButton.show();
 }
 
 function showAuthUI() {
+    document.getElementById('main-menu').style.display = 'none';
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'none';
-    document.getElementById('leaderboard-panel').style.display = 'none';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('touch-controls').classList.remove('active');
     window._miaMove = null;
@@ -98,10 +109,10 @@ function showRegisterForm() {
 }
 
 function showStartUI() {
+    document.getElementById('main-menu').style.display = 'none';
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('start-screen').style.display = 'flex';
     document.getElementById('game-container').style.display = 'none';
-    document.getElementById('leaderboard-panel').style.display = 'block';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('touch-controls').classList.remove('active');
     window._miaMove = null;
@@ -139,7 +150,11 @@ async function loadPlayerProfile(user) {
 }
 
 async function refreshLeaderboard() {
-    const list = document.getElementById('leaderboard-list');
+    await populateLeaderboardList('leaderboard-list');
+}
+
+async function populateLeaderboardList(listId) {
+    const list = document.getElementById(listId);
     if (!list || !supabaseClient) return;
 
     const { data, error } = await supabaseClient
@@ -148,18 +163,16 @@ async function refreshLeaderboard() {
         .order('score', { ascending: false })
         .limit(10);
 
-    if (error) {
-        list.innerHTML = '<li style="color:#FF6699;">Помилка</li>';
-        return;
-    }
+    if (error) { list.innerHTML = '<li style="color:#FF6699;">Помилка</li>'; return; }
 
     list.innerHTML = '';
     (data || []).forEach(row => {
         const li = document.createElement('li');
+        const isMe = currentPlayer && row.player_name === currentPlayer.name;
+        if (isMe) li.className = 'go-lb-me';
         const name = document.createElement('span');
         name.className = 'lb-name';
-        name.textContent = row.player_name;
-        name.title = row.player_name;
+        name.textContent = row.player_name + (isMe ? ' ◀' : '');
         const score = document.createElement('span');
         score.className = 'lb-score';
         score.textContent = row.score;
@@ -167,6 +180,27 @@ async function refreshLeaderboard() {
         li.appendChild(score);
         list.appendChild(li);
     });
+}
+
+const ITEM_EMOJI = { star: '⭐', heart: '❤️', flower: '🌸', vitamin: '💊', dream: '✨', bird0: '🐦' };
+
+async function showGameOverHTML(data) {
+    const { score, playerName, items } = data;
+    document.getElementById('go-player-name').textContent = playerName || '';
+    document.getElementById('go-score').textContent = '★ ' + score;
+
+    const itemsEl = document.getElementById('go-items');
+    itemsEl.innerHTML = '';
+    (items || []).forEach(it => {
+        const div = document.createElement('div');
+        div.className = 'go-item';
+        div.innerHTML = (ITEM_EMOJI[it.key] || '🎁') + '<span>×' + it.count + '</span>';
+        itemsEl.appendChild(div);
+    });
+
+    document.getElementById('go-leaderboard-list').innerHTML = '<li style="color:#aaa;font-size:12px;">Завантаження...</li>';
+    document.getElementById('gameover-overlay').style.display = 'flex';
+    await populateLeaderboardList('go-leaderboard-list');
 }
 
 async function submitScore(score) {
@@ -330,6 +364,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('change-account-btn').addEventListener('click', changeAccount);
     document.getElementById('change-player-btn').addEventListener('click', changePlayer);
 
+    // Головне меню
+    document.getElementById('menu-play-btn').addEventListener('click', () => {
+        document.getElementById('main-menu').style.display = 'none';
+        showAuthUI();
+    });
+    document.getElementById('menu-leaderboard-btn').addEventListener('click', async () => {
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('leaderboard-overlay').style.display = 'flex';
+        await populateLeaderboardList('overlay-leaderboard-list');
+    });
+    document.getElementById('close-leaderboard-btn').addEventListener('click', () => {
+        document.getElementById('leaderboard-overlay').style.display = 'none';
+        showMainMenu();
+    });
+    document.getElementById('go-restart-btn').addEventListener('click', () => {
+        document.getElementById('gameover-overlay').style.display = 'none';
+        startGameWithName(gamePlayerName);
+    });
+
     // Старт игры
     document.getElementById('start-game-btn').addEventListener('click', startGame);
     document.getElementById('start-game-btn-logged').addEventListener('click', startGameLogged);
@@ -438,17 +491,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         joystickR.addEventListener('pointercancel', joyREnd);
     }
 
-    // Перевіряємо чи вже є активна сесія
+    // Перевіряємо чи вже є активна сесія — якщо так, одразу до start screen
     if (supabaseClient) {
         const { data } = await supabaseClient.auth.getSession();
         if (data.session?.user) {
             await loadPlayerProfile(data.session.user);
-            showStartUI();
-            await refreshLeaderboard();
+            showMainMenu();
             return;
         }
     }
-    showAuthUI();
+    showMainMenu();
 });
 
 class MainScene extends Phaser.Scene {
@@ -1806,7 +1858,7 @@ class MainScene extends Phaser.Scene {
         this.dreamMode = false;
         this.dreamSpawned = false;
         this.dreamMusic = null;
-        this.mriyaNextThreshold = 1200; // Наступна Мрія через 1200 очок
+        this.mriyaNextThreshold = 3000; // Мрія вперше після 3000 очок
 
         // Розміри ігрового поля = реальний розмір екрана (1 гра-піксель = 1 CSS-піксель)
         this.GW = this.scale.width;
@@ -2111,7 +2163,7 @@ class MainScene extends Phaser.Scene {
                 // Якщо Мрія пішла за екран — вважаємо спробу використаною
                 if (item.getData('dream')) {
                     this.dreamSpawned = false;
-                    this.mriyaNextThreshold = this.score + 1000;
+                    this.mriyaNextThreshold = this.score + 3000;
                 }
                 item.destroy();
             }
@@ -2807,7 +2859,7 @@ class MainScene extends Phaser.Scene {
                     });
                     // Дозволяємо Мрії з'явитися знову незабаром після втрати життя
                     this.dreamSpawned = false;
-                    this.mriyaNextThreshold = this.score + 300;
+                    this.mriyaNextThreshold = this.score + 600;
                 }
             };
             this.time.delayedCall(1500, rs);
@@ -2839,6 +2891,9 @@ class MainScene extends Phaser.Scene {
                 if (this.superItemsCollected[k] > 0) allCollected.push({ key: k, count: this.superItemsCollected[k] });
             });
             if (this.totalBirds > 0) allCollected.push({ key: 'bird0', count: this.totalBirds });
+
+            // Показуємо HTML overlay з результатом і Топ 10
+            showGameOverHTML({ score: this.score, playerName: this.playerName, items: allCollected });
 
             const centerX = this.GW / 2;
 

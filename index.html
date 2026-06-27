@@ -415,7 +415,7 @@
         }
 
         /* ── ЕКРАНИ ── */
-        #auth-screen, #start-screen {
+        #main-menu, #auth-screen, #start-screen, #leaderboard-overlay, #gameover-overlay {
             position: fixed;
             inset: 0;
             z-index: 30;
@@ -424,7 +424,48 @@
             align-items: center;
             background: radial-gradient(circle at top, rgba(255, 0, 255, 0.22), rgba(0, 0, 0, 0.88));
         }
-        #start-screen { display: none; }
+        #auth-screen, #start-screen, #leaderboard-overlay, #gameover-overlay { display: none; }
+
+        /* Компактний блок гравця під час гри */
+        #player-bar {
+            font-size: 12px !important;
+            padding: 5px 8px !important;
+        }
+        #player-bar button { display: none !important; }
+
+        /* Ігрова таблиця лідерів — прихована під час гри, є у gameover */
+        #leaderboard-panel { display: none !important; }
+
+        /* ── GAMEOVER OVERLAY ── */
+        #gameover-overlay { z-index: 200; overflow-y: auto; align-items: flex-start; padding: 12px; }
+        .gameover-card {
+            width: min(480px, 96vw) !important;
+            max-height: 96vh;
+            overflow-y: auto;
+            padding: 24px 20px !important;
+        }
+        .gameover-card h2 { color: #FF3366; margin: 0 0 4px; font-size: 26px; }
+        .go-player  { color: #FF99DD; font-size: 16px; margin: 2px 0 8px; }
+        .go-score   { color: #00FFFF; font-size: 42px; font-weight: 800; margin: 0 0 12px; }
+        .go-items   { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px; }
+        .go-item    { display: flex; align-items: center; gap: 4px; font-size: 22px; background: rgba(0,255,255,0.08); border-radius: 8px; padding: 4px 10px; }
+        .go-item span { font-size: 14px; color: #fff; font-weight: 700; }
+        .go-lb-title { color: #FFAA33; font-size: 15px; font-weight: 700; margin: 4px 0 8px; text-align: center; }
+        .go-lb-list { list-style: none; padding: 0; margin: 0 0 16px; counter-reset: rank; width: 100%; }
+        .go-lb-list li { counter-increment: rank; display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px solid rgba(0,255,255,0.1); }
+        .go-lb-list li::before { content: counter(rank)"."; color: #00ffff; margin-right: 6px; flex: 0 0 auto; }
+        .go-lb-list .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .go-lb-list .lb-score { color: #ffdd55; font-weight: 700; margin-left: 8px; }
+        .go-lb-list li.go-lb-me { background: rgba(255,100,220,0.15); border-radius: 4px; }
+
+        /* ── LEADERBOARD OVERLAY ── */
+        #leaderboard-overlay { z-index: 200; }
+        .lb-overlay-card { width: min(400px, 94vw) !important; }
+        .lb-overlay-list { list-style: none; padding: 0; margin: 0 0 16px; counter-reset: rank; }
+        .lb-overlay-list li { counter-increment: rank; display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; border-bottom: 1px solid rgba(0,255,255,0.12); }
+        .lb-overlay-list li::before { content: counter(rank)"."; color: #00ffff; margin-right: 8px; }
+        .lb-overlay-list .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-overlay-list .lb-score { color: #ffdd55; font-weight: 700; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -439,6 +480,19 @@
             return false;
         };
     </script>
+
+    <!-- ГОЛОВНЕ МЕНЮ -->
+    <div id="main-menu">
+        <div class="card">
+            <h1>Пригоди Мії</h1>
+            <p class="subtitle">Готова до пригод?</p>
+            <button id="menu-play-btn" class="btn-primary" style="margin-bottom:12px;">🎮 Грати</button>
+            <button id="menu-leaderboard-btn" class="btn-primary" style="background:linear-gradient(90deg,#0a3a5a,#1a6a8a);">🏆 Таблиця рекордів</button>
+            <div class="card-footer neon-footer" style="margin-top:20px;">Гра розроблена для Мії з міста Миронівка</div>
+            <div id="version-label">v2.3</div>
+            <div id="diag-label"></div>
+        </div>
+    </div>
 
     <!-- ЕКРАН АВТОРИЗАЦІЇ -->
     <div id="auth-screen">
@@ -511,11 +565,28 @@
                 </div>
             </div>
 
-            <div class="card-footer neon-footer">
-                Гра розроблена для Мії з міста Мирнівка
-            </div>
-            <div id="version-label">v1.4</div>
-            <div id="diag-label"></div>
+        </div>
+    </div>
+
+    <!-- OVERLAY: ТАБЛИЦЯ РЕКОРДІВ -->
+    <div id="leaderboard-overlay">
+        <div class="card lb-overlay-card">
+            <h2 style="color:#00FFFF;margin:0 0 16px;text-align:center;">🏆 Топ 10</h2>
+            <ol id="overlay-leaderboard-list" class="lb-overlay-list"></ol>
+            <button id="close-leaderboard-btn" class="btn-primary" style="background:linear-gradient(90deg,#333,#555);">← Назад</button>
+        </div>
+    </div>
+
+    <!-- OVERLAY: GAME OVER + ТОП 10 -->
+    <div id="gameover-overlay">
+        <div class="card gameover-card">
+            <h2 style="text-align:center;">🎮 Гра закінчилась!</h2>
+            <p class="go-player" id="go-player-name" style="text-align:center;"></p>
+            <p class="go-score" id="go-score" style="text-align:center;"></p>
+            <div class="go-items" id="go-items"></div>
+            <p class="go-lb-title">🏆 Топ 10</p>
+            <ol id="go-leaderboard-list" class="go-lb-list"></ol>
+            <button id="go-restart-btn" class="btn-primary">🔄 Спробувати знову</button>
         </div>
     </div>
 
@@ -545,7 +616,7 @@
             <div id="joystick-knob-r"></div>
         </div>
     </div>
-    <script src="game.js?v=2.3"></script>
+    <script src="game.js?v=2.4"></script>
     <script>
         // ── Діагностика: показуємо реальні параметри екрану та FPS ──
         (function () {
