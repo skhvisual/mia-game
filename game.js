@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.6';
+const GAME_VERSION = 'v2.7';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -2871,12 +2871,10 @@ class MainScene extends Phaser.Scene {
         if (this.lives > 0) {
             this.playBuffer('ohno', 0.7);
             // Показуємо повідомлення про втрату життя (глубже, под иконками)
-            const msgText = this.add.text(this.GW / 2, this.GH * 0.25, this.playerName + ', у тебе залишилось ' + this.lives + ' життя!', {
-                fontSize: '36px', fill: '#FF3366', fontStyle: 'bold', align: 'center',
-                backgroundColor: '#000', padding: { x: 16, y: 10 },
-                wordWrap: { width: this.GW - 60 }
+            const msgText = this.add.text(this.GW / 2, this.GH * 0.25, '❤️ залишилось ' + this.lives, {
+                fontSize: '32px', fill: '#FF3366', fontStyle: 'bold', align: 'center',
+                stroke: '#000', strokeThickness: 6
             }).setOrigin(0.5).setDepth(95);
-            msgText.setShadow(3, 3, '#000', 6);
 
             this.physics.pause();
             this.gameOver = true;
