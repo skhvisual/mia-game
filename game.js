@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.7';
+const GAME_VERSION = 'v2.8';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -94,19 +94,7 @@ function resetAuthForms() {
     if (msg2) msg2.textContent = '';
 }
 
-function showLoginForm() {
-    document.getElementById('auth-question').style.display = 'none';
-    document.getElementById('auth-login-form').style.display = 'block';
-    document.getElementById('auth-register-form').style.display = 'none';
-    document.getElementById('auth-message').textContent = '';
-}
-
-function showRegisterForm() {
-    document.getElementById('auth-question').style.display = 'none';
-    document.getElementById('auth-login-form').style.display = 'none';
-    document.getElementById('auth-register-form').style.display = 'block';
-    document.getElementById('auth-message-register').textContent = '';
-}
+/* showLoginForm / showRegisterForm — приховано, для майбутньої ПК-версії з email-авторизацією */
 
 function showStartUI() {
     document.getElementById('main-menu').style.display = 'none';
@@ -432,7 +420,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('go-restart-btn').addEventListener('click', () => {
         document.getElementById('gameover-overlay').style.display = 'none';
-        startGameWithName(gamePlayerName);
+        const name = gamePlayerName || currentPlayer?.name;
+        if (name) startGameWithName(name);
+        else showMainMenu();
     });
 
     // Старт игры
@@ -571,7 +561,6 @@ class MainScene extends Phaser.Scene {
         this.gameSpeed = 1.19;
         this.lives = 3;
         this.playerName = window._startGameWithName || 'Мія';
-        this.totalRegularItems = 0;
         this.totalBirds = 0;
     }
 
@@ -2097,10 +2086,6 @@ class MainScene extends Phaser.Scene {
         // Трекінг звичайних зібраних предметів за типом (для екрану фіналу)
         this.regularCollected = { star: 0, heart: 0, flower: 0 };
 
-        console.log("TEST MONITOR: Game scene initialized. Activating listeners trace.");
-        this.events.once('shutdown', () => {
-            console.log("TEST MONITOR: Scene shutting down. Cleaning up.");
-        });
     }
 
     initAudioContext() {
@@ -2807,7 +2792,6 @@ class MainScene extends Phaser.Scene {
         }
         
         const pts = key === 'heart' ? 25 : (key === 'flower' ? 15 : 10);
-        this.totalRegularItems += 1;
         if (this.regularCollected[key] !== undefined) this.regularCollected[key]++;
         this.showFloatingScore(pts, item.x, item.y);
 
@@ -2952,114 +2936,6 @@ class MainScene extends Phaser.Scene {
 
             // Показуємо HTML overlay з результатом і Топ 10
             showGameOverHTML({ score: this.score, playerName: this.playerName, items: allCollected });
-
-            const centerX = this.GW / 2;
-
-            // Затемнення всього екрану
-            this.add.rectangle(centerX, this.GH / 2, this.GW, this.GH, 0x05010a, 0.88)
-                .setOrigin(0.5).setDepth(100);
-
-            // ── Метрики розкладки ──
-            const iconsPerRow = 4;
-            const cellW = 86;
-            const iconRowH = 62;
-            const rows = allCollected.length > 0 ? Math.ceil(allCollected.length / iconsPerRow) : 0;
-
-            const padTop = 34;
-            const titleGap = 52;
-            const nameGap = 40;
-            const scoreGap = 60;
-            const labelGap = allCollected.length > 0 ? 34 : 0;
-            const iconsGap = rows * iconRowH;
-            const btnGap = 84;
-
-            const panelW = Math.min(450, this.GW - 36);
-            const panelH = padTop + titleGap + nameGap + scoreGap + labelGap + iconsGap + btnGap;
-
-            const panelY = this.GH / 2;
-            const panelTop = panelY - panelH / 2;
-            const panelLeft = centerX - panelW / 2;
-
-            // ── Скруглена неонова панель (Graphics) ──
-            const g = this.add.graphics().setDepth(101);
-            g.fillStyle(0x0a0420, 0.97);
-            g.fillRoundedRect(panelLeft, panelTop, panelW, panelH, 22);
-            g.lineStyle(3, 0x00ffff, 0.9);
-            g.strokeRoundedRect(panelLeft, panelTop, panelW, panelH, 22);
-            // Внутрішня рожева лінія для глибини
-            g.lineStyle(1, 0xff33aa, 0.5);
-            g.strokeRoundedRect(panelLeft + 6, panelTop + 6, panelW - 12, panelH - 12, 18);
-            this.tweens.add({ targets: g, alpha: { from: 1, to: 0.82 }, yoyo: true, repeat: -1, duration: 1400 });
-
-            let cy = panelTop + padTop;
-
-            // Заголовок
-            this.add.text(centerX, cy, 'Гра закінчилася!', {
-                fontSize: '30px', fill: '#FF3366', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0.5, 0).setShadow(3, 3, '#000', 6).setDepth(103);
-            cy += titleGap;
-
-            // Ім'я гравця
-            this.add.text(centerX, cy, this.playerName, {
-                fontSize: '20px', fill: '#FF99DD', fontFamily: 'Arial'
-            }).setOrigin(0.5, 0).setDepth(103);
-            cy += nameGap;
-
-            // Очки
-            this.add.text(centerX, cy, 'Очки: ' + this.score, {
-                fontSize: '40px', fill: '#00FFFF', fontStyle: 'bold'
-            }).setOrigin(0.5, 0).setShadow(2, 2, '#000', 5).setDepth(103);
-            cy += scoreGap;
-
-            // ── Зібрані предмети ──
-            if (allCollected.length > 0) {
-                this.add.text(centerX, cy, 'Зібрано:', {
-                    fontSize: '16px', fill: '#FFAA33', fontStyle: 'bold'
-                }).setOrigin(0.5, 0).setDepth(103);
-                cy += labelGap;
-
-                allCollected.forEach((it, i) => {
-                    const row = Math.floor(i / iconsPerRow);
-                    const inRow = Math.min(iconsPerRow, allCollected.length - row * iconsPerRow);
-                    const rowStartX = centerX - (inRow * cellW) / 2 + cellW / 2;
-                    const col = i % iconsPerRow;
-                    const ix = rowStartX + col * cellW;
-                    const iy = cy + row * iconRowH + 24;
-
-                    const icon = this.add.image(ix - 12, iy, it.key).setDepth(103);
-                    const sc = 36 / Math.max(icon.width, icon.height);
-                    icon.setScale(sc);
-                    this.add.text(ix + 10, iy, '×' + it.count, {
-                        fontSize: '19px', fill: '#FFFFFF', fontStyle: 'bold'
-                    }).setOrigin(0, 0.5).setShadow(1, 1, '#000', 3).setDepth(103);
-                });
-                cy += iconsGap;
-            }
-
-            // Кнопка рестарту — внизу панелі
-            const btnY = panelTop + panelH - 42;
-            const restartBtnBg = this.add.rectangle(centerX, btnY, 250, 54, 0x003344, 0.95);
-            restartBtnBg.setStrokeStyle(2, 0x00ffff, 1).setDepth(102);
-            const restartText = this.add.text(centerX, btnY, 'Спробувати знову', {
-                fontSize: '20px', fill: '#00FFFF', fontStyle: 'bold'
-            }).setOrigin(0.5).setDepth(103);
-
-            this.tweens.add({ targets: [restartBtnBg, restartText], alpha: 0.6, yoyo: true, repeat: -1, duration: 800 });
-            
-            const restart = () => {
-                this.input.removeAllListeners();
-                this.input.keyboard.removeAllListeners();
-                this.tweens.killAll();
-                this.time.removeAllEvents();
-                if (window._game) {
-                    window._game.destroy(true);
-                    window._game = null;
-                }
-                showStartUI();
-            };
-            this.input.once('pointerdown', restart);
-            this.input.keyboard.once('keydown-SPACE', restart);
-            this.input.keyboard.once('keydown-ENTER', restart);
         }
     }
 
