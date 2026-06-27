@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v3.3';
+const GAME_VERSION = 'v3.4';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -562,6 +562,7 @@ class MainScene extends Phaser.Scene {
         super('MainScene');
         this.score = 0;
         this.gameOver = false;
+        this._smoothF = 0;
         this.gameSpeed = 1.19;
         this.lives = 3;
         this.playerName = window._startGameWithName || 'Мія';
@@ -2110,14 +2111,13 @@ class MainScene extends Phaser.Scene {
     update(time, delta) {
         if (this.gameOver) return;
 
-        // Коефіцієнт кадра: робить рух незалежним від FPS (на телефоні FPS нижчий).
-        // Беремо реальний час через performance.now() — обходить згладжування Phaser,
-        // яке могло не компенсувати низький FPS. 16.6667мс = 1 кадр при 60fps.
-        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-        if (!this._lastUpdate) this._lastUpdate = now;
-        let realDelta = now - this._lastUpdate;
-        this._lastUpdate = now;
-        const f = Math.min(realDelta / 16.6667, 6);
+        // Коефіцієнт кадра (рух незалежний від FPS). Використовуємо delta від Phaser
+        // (rAF, узгоджений з рендером) і ЗГЛАДЖУЄМО ковзним середнім — інакше дрібні
+        // коливання delta кадр-у-кадр дають смикання предметів.
+        let rawF = Math.min((delta || 16.6667) / 16.6667, 3);
+        if (!this._smoothF) this._smoothF = rawF;
+        this._smoothF = this._smoothF * 0.85 + rawF * 0.15; // EMA
+        const f = this._smoothF;
 
         this.gameSpeed += 0.00003 * f; // Более плавное ускорение
         let groundSpeed = this.gameSpeed * f;
@@ -2956,7 +2956,7 @@ const config = {
     parent: 'game-container',
     pixelArt: true,
     antialias: false,
-    roundPixels: true,
+    roundPixels: false, // вимкнено: давало смикання предметів при субпіксельному русі
     backgroundColor: '#020208',
     scale: {
         mode: Phaser.Scale.NONE,
