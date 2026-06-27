@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.4';
+const GAME_VERSION = 'v2.5';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -147,6 +147,46 @@ async function loadPlayerProfile(user) {
         email: user.email,
         name: data?.player_name || user.email
     };
+    saveCachedPlayer();
+}
+
+function saveCachedPlayer() {
+    if (currentPlayer) {
+        try { localStorage.setItem('mia_cached_player', JSON.stringify(currentPlayer)); } catch(e) {}
+    }
+}
+
+function loadCachedPlayer() {
+    try {
+        const c = JSON.parse(localStorage.getItem('mia_cached_player') || 'null');
+        if (c?.id && c?.name) { currentPlayer = c; return true; }
+    } catch(e) {}
+    return false;
+}
+
+async function tryTelegramLogin() {
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!tgUser || !supabaseClient) return false;
+
+    const email = `tg_${tgUser.id}@miagame.internal`;
+    const pass  = `tgauth_${tgUser.id}_mia2024`;
+    const name  = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || tgUser.username || 'TG User';
+
+    // Спроба увійти
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+    if (!error && data.user) {
+        await loadPlayerProfile(data.user);
+        return true;
+    }
+
+    // Акаунт не існує — реєструємо
+    const { data: reg } = await supabaseClient.auth.signUp({ email, password: pass });
+    if (reg?.user) {
+        await supabaseClient.from('profiles').upsert({ id: reg.user.id, player_name: name });
+        await loadPlayerProfile(reg.user);
+        return true;
+    }
+    return false;
 }
 
 async function refreshLeaderboard() {
@@ -272,13 +312,11 @@ async function loginPlayer() {
 
 async function logoutPlayer() {
     if (supabaseClient) await supabaseClient.auth.signOut();
-    if (window._game) {
-        window._game.destroy(true);
-        window._game = null;
-    }
+    if (window._game) { window._game.destroy(true); window._game = null; }
     currentPlayer = null;
     gamePlayerName = '';
-    showAuthUI();
+    try { localStorage.removeItem('mia_cached_player'); } catch(e) {}
+    showMainMenu();
 }
 
 function changeAccount() {
@@ -367,7 +405,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Головне меню
     document.getElementById('menu-play-btn').addEventListener('click', () => {
         document.getElementById('main-menu').style.display = 'none';
-        showAuthUI();
+        if (currentPlayer) { showStartUI(); }
+        else { showAuthUI(); }
     });
     document.getElementById('menu-leaderboard-btn').addEventListener('click', async () => {
         document.getElementById('main-menu').style.display = 'none';
@@ -491,7 +530,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         joystickR.addEventListener('pointercancel', joyREnd);
     }
 
-    // Перевіряємо чи вже є активна сесія — якщо так, одразу до start screen
+    // 1. Спроба автологіну через Telegram
+    if (await tryTelegramLogin()) { showMainMenu(); return; }
+
+    // 2. Відновлення активної Supabase-сесії
     if (supabaseClient) {
         const { data } = await supabaseClient.auth.getSession();
         if (data.session?.user) {
@@ -500,6 +542,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             return;
         }
     }
+
+    // 3. Кешований гравець з localStorage
+    if (loadCachedPlayer()) { showMainMenu(); return; }
+
+    // 4. Нічого нема — показуємо меню (при кліку "Грати" попросить логін)
     showMainMenu();
 });
 
