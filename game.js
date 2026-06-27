@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.8';
+const GAME_VERSION = 'v2.9';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -2563,8 +2563,7 @@ class MainScene extends Phaser.Scene {
         this.time.addEvent({ delay: 1400, callback: this.spawnCollectible, callbackScope: this, loop: true });
         this.time.addEvent({ delay: 2500, callback: this.spawnBird, callbackScope: this, loop: true });
         this.time.addEvent({ delay: 3600, callback: this.spawnSuperItem, callbackScope: this, loop: true });
-        // Наступна Мрія: поточний рахунок + 1000 (щоб не спавнилась одразу)
-        this.mriyaNextThreshold = this.score + 1000;
+        this.mriyaNextThreshold = this.score + 3000;
         this.dreamSpawned = false;
     }
 
