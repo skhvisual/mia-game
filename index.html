@@ -405,14 +405,16 @@
 
         #lives-display {
             display: none;
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 0px) + 12px);
+            left: 14px;
             z-index: 110;
-            color: #ff3366;
-            font-size: 28px;
-            font-weight: bold;
-            text-shadow: 0 0 20px rgba(255, 51, 102, 0.6), 0 0 40px rgba(255, 0, 0, 0.3);
+            font-size: 26px;
             letter-spacing: 6px;
+            line-height: 1;
             pointer-events: none;
         }
+        #lives-display.active { display: block; }
 
         /* ── ЕКРАНИ ── */
         #main-menu, #auth-screen, #start-screen, #leaderboard-overlay, #gameover-overlay {
@@ -594,10 +596,7 @@
 
     <div id="ui-container">
         <div id="player-bar">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                <span>Гравець: <b id="current-player-name">—</b></span>
-                <span id="lives-html" style="font-size:20px;letter-spacing:2px;"></span>
-            </div>
+            <div>Гравець: <b id="current-player-name">—</b></div>
             <button id="logout-player-btn">Вийти</button>
         </div>
 
@@ -607,7 +606,7 @@
         </div>
     </div>
 
-    <div id="lives-display">❤️ ❤️ ❤️</div>
+    <div id="lives-display"></div>
     <div id="game-container"></div>
 
     <!-- Джойстик зліва + кнопка стрибка справа -->
@@ -621,7 +620,7 @@
             <div id="joystick-knob-r"></div>
         </div>
     </div>
-    <script src="game.js?v=3.1"></script>
+    <script src="game.js?v=3.2"></script>
     <script>
         // ── Діагностика: показуємо реальні параметри екрану та FPS ──
         (function () {

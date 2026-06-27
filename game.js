@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v3.1';
+const GAME_VERSION = 'v3.2';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -51,6 +51,7 @@ function showMainMenu() {
     document.getElementById('game-container').style.display = 'none';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('touch-controls').classList.remove('active');
+    document.getElementById('lives-display').classList.remove('active');
     document.getElementById('gameover-overlay').style.display = 'none';
     window._miaMove = null;
 }
@@ -63,6 +64,7 @@ function showGameUI() {
     document.getElementById('player-bar').style.display = 'block';
     document.getElementById('current-player-name').textContent = currentPlayer?.name || 'Гравець';
     document.getElementById('touch-controls').classList.add('active');
+    document.getElementById('lives-display').classList.add('active');
     document.getElementById('gameover-overlay').style.display = 'none';
     window._miaMove = null;
     if (window.__tgBackButton) window.__tgBackButton.show();
@@ -75,6 +77,7 @@ function showAuthUI() {
     document.getElementById('game-container').style.display = 'none';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('touch-controls').classList.remove('active');
+    document.getElementById('lives-display').classList.remove('active');
     window._miaMove = null;
     resetAuthForms();
 }
@@ -103,6 +106,7 @@ function showStartUI() {
     document.getElementById('game-container').style.display = 'none';
     document.getElementById('player-bar').style.display = 'none';
     document.getElementById('touch-controls').classList.remove('active');
+    document.getElementById('lives-display').classList.remove('active');
     window._miaMove = null;
 
     if (currentPlayer) {
@@ -2938,7 +2942,7 @@ class MainScene extends Phaser.Scene {
 
     updateLivesDisplay() {
         const hearts = ['💙', '💛', '💚'];
-        const el = document.getElementById('lives-html');
+        const el = document.getElementById('lives-display');
         if (el) {
             el.textContent = hearts.slice(0, this.lives).join(' ');
         }
