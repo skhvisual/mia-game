@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v3.2';
+const GAME_VERSION = 'v3.3';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -110,12 +110,12 @@ function showStartUI() {
     window._miaMove = null;
 
     if (currentPlayer) {
-        // Залогинен — показываем только "Начать гру" и "Змінити акаунт"
+        // Залогінений — показуємо "Почати гру" і "Змінити акаунт"
         document.getElementById('logged-in-container').style.display = 'block';
         document.getElementById('guest-container').style.display = 'none';
         document.getElementById('greeting-text').textContent = 'Ласкаво просимо, ' + (currentPlayer?.name || '') + '!';
     } else {
-        // Гость — показываем ввод имени
+        // Гість — показуємо введення імені
         document.getElementById('logged-in-container').style.display = 'none';
         document.getElementById('guest-container').style.display = 'block';
         document.getElementById('greeting-text').textContent = 'Ласкаво просимо!';
@@ -2022,7 +2022,7 @@ class MainScene extends Phaser.Scene {
         this.collectibles = this.add.group();
         this.birds = this.add.group();
         this.superItems = this.add.group();
-        this.rainItems = this.add.group(); // Дождь предметов в режиме Мечты
+        this.rainItems = this.add.group(); // Дощ предметів у режимі Мрії
 
         // Спавнеры
         this.time.addEvent({ delay: 2200, callback: this.spawnObstacle, callbackScope: this, loop: true });
@@ -2053,7 +2053,7 @@ class MainScene extends Phaser.Scene {
         };
 
         // Счётчики
-        this.scoreText = this.add.text(20, 60, 'Очки: 0', { fontSize: '32px', fill: '#FFF', fontStyle: 'bold' });
+        this.scoreText = this.add.text(20, 60, 'Бали: 0', { fontSize: '32px', fill: '#FFF', fontStyle: 'bold' });
         this.scoreText.setShadow(2, 2, '#000', 4);
 
         // Відображення життів (на canvas) - в левом верхнем углу
@@ -2728,7 +2728,7 @@ class MainScene extends Phaser.Scene {
         
         // Обновление счета
         this.score += points;
-        this.scoreText.setText('Очки: ' + this.score);
+        this.scoreText.setText('Бали: ' + this.score);
         
         // Удаляем объект
         item.destroy();
@@ -2766,7 +2766,7 @@ class MainScene extends Phaser.Scene {
                 this.burstParticles(32, item.x, item.y, 0xFFD700);
                 item.destroy();
                 this.score += pts;
-                this.scoreText.setText('Очки: ' + this.score);
+                this.scoreText.setText('Бали: ' + this.score);
                 // Трекаємо супер-предмети в режимі Мрії
                 this.superItemsCollected[key] = (this.superItemsCollected[key] || 0) + 1;
                 this.updateSuperItemsText(key);
@@ -2779,7 +2779,7 @@ class MainScene extends Phaser.Scene {
             item.destroy();
             if (this.regularCollected[key] !== undefined) this.regularCollected[key]++;
             this.score += pts;
-            this.scoreText.setText('Очки: ' + this.score);
+            this.scoreText.setText('Бали: ' + this.score);
             return;
         }
 
@@ -2803,7 +2803,7 @@ class MainScene extends Phaser.Scene {
         this.playSynthSound(key); // Уникальный звук: star / heart / flower
         
         this.score += pts;
-        this.scoreText.setText('Очки: ' + this.score);
+        this.scoreText.setText('Бали: ' + this.score);
     }
 
     collectBird(bird) {
@@ -2818,7 +2818,7 @@ class MainScene extends Phaser.Scene {
 
         this.score += points;
         this.totalBirds += 1;
-        this.scoreText.setText('Очки: ' + this.score);
+        this.scoreText.setText('Бали: ' + this.score);
     }
 
     stopAllSounds() {
@@ -2843,7 +2843,7 @@ class MainScene extends Phaser.Scene {
         // Обриваємо всі звуки, що звучали до зіткнення
         this.stopAllSounds();
 
-        // Если в режиме Мечты — выключаем его
+        // Якщо в режимі Мрії — вимикаємо його
         if (this.dreamMode) {
             this.endDream();
         }
