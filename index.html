@@ -499,32 +499,24 @@
         <div class="card">
             <h1>Пригоди Мії</h1>
 
-            <!-- Крок 1: Питання — чи є акаунт -->
+            <!-- Telegram: просто ввести ім'я (якщо не автологін) -->
             <div id="auth-question">
-                <p class="subtitle">Ласкаво просимо!</p>
-                <p style="color:#ccc;margin-bottom:20px;font-size:16px;">У вас є акаунт?</p>
-                <div class="auth-row">
-                    <button id="auth-have-account-btn" class="btn-primary">Так</button>
-                    <button id="auth-no-account-btn" class="btn-primary">Ні</button>
-                </div>
-                <div class="card-footer">
-                    <span class="neon-line">Гра розроблена для Мії з міста Мирнівка</span>
-                </div>
+                <p class="subtitle">Введи своє ім'я</p>
+                <input id="auth-guest-name" type="text" placeholder="Ім'я" maxlength="24" autocomplete="nickname" style="margin-bottom:14px;">
+                <button id="auth-guest-go-btn" class="btn-primary">Грати!</button>
+                <div id="auth-message"></div>
             </div>
 
-            <!-- Крок 2: Форма входу -->
+            <!-- ПРИХОВАНО ДЛЯ ПК-ВЕРСІЇ: email логін/реєстрація -->
+            <!--
             <div id="auth-login-form" style="display:none;">
                 <p class="subtitle">Увійдіть у свій акаунт</p>
                 <input id="auth-email" type="email" placeholder="Електронна пошта" autocomplete="email">
                 <input id="auth-password" type="password" placeholder="Пароль" autocomplete="current-password">
                 <button id="login-button" class="btn-primary">Увійти</button>
                 <div id="auth-message"></div>
-                <div class="switch-link">
-                    <a id="back-to-question-from-login">← Назад</a>
-                </div>
+                <div class="switch-link"><a id="back-to-question-from-login">← Назад</a></div>
             </div>
-
-            <!-- Крок 3: Форма реєстрації -->
             <div id="auth-register-form" style="display:none;">
                 <p class="subtitle">Створіть новий акаунт</p>
                 <input id="auth-name" type="text" placeholder="Ім'я гравця" maxlength="24" autocomplete="nickname">
@@ -532,9 +524,19 @@
                 <input id="auth-password2" type="password" placeholder="Пароль" autocomplete="new-password">
                 <button id="register-button" class="btn-primary">Зареєструватися</button>
                 <div id="auth-message-register"></div>
-                <div class="switch-link">
-                    <a id="back-to-question-from-register">← Назад</a>
-                </div>
+                <div class="switch-link"><a id="back-to-question-from-register">← Назад</a></div>
+            </div>
+            -->
+
+            <!-- Заглушки щоб JS не падав (елементи приховані) -->
+            <div style="display:none;">
+                <div id="auth-login-form"></div>
+                <div id="auth-register-form"></div>
+                <input id="auth-email"><input id="auth-password">
+                <input id="auth-name"><input id="auth-email2"><input id="auth-password2">
+                <button id="login-button"></button><button id="register-button"></button>
+                <a id="back-to-question-from-login"></a><a id="back-to-question-from-register"></a>
+                <div id="auth-message-register"></div>
             </div>
 
         </div>
@@ -616,7 +618,7 @@
             <div id="joystick-knob-r"></div>
         </div>
     </div>
-    <script src="game.js?v=2.5"></script>
+    <script src="game.js?v=2.6"></script>
     <script>
         // ── Діагностика: показуємо реальні параметри екрану та FPS ──
         (function () {

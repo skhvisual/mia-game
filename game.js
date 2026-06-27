@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v2.5';
+const GAME_VERSION = 'v2.6';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -379,15 +379,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     const vl = document.getElementById('version-label');
     if (vl) vl.textContent = 'js ' + GAME_VERSION + ' ✓';
 
-    // Крок 1: опрос — есть ли аккаунт
-    document.getElementById('auth-have-account-btn').addEventListener('click', showLoginForm);
-    document.getElementById('auth-no-account-btn').addEventListener('click', showRegisterForm);
-    document.getElementById('back-to-question-from-login').addEventListener('click', resetAuthForms);
-    document.getElementById('back-to-question-from-register').addEventListener('click', resetAuthForms);
+    // Telegram: просте введення імені (email-форми приховані для ПК-версії)
+    const guestGoBtn = document.getElementById('auth-guest-go-btn');
+    const guestNameInput = document.getElementById('auth-guest-name');
+    if (guestGoBtn) {
+        const doGuestStart = () => {
+            const name = (guestNameInput?.value || '').trim();
+            if (!name) { setAuthMessage('Введи ім\'я!'); return; }
+            saveName(name);
+            gamePlayerName = name;
+            currentPlayer = { id: null, name };
+            saveCachedPlayer();
+            showStartUI();
+        };
+        guestGoBtn.addEventListener('click', doGuestStart);
+        guestNameInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doGuestStart(); });
+    }
 
-    // Крок 2: логин
-    document.getElementById('login-button').addEventListener('click', loginPlayer);
-    document.getElementById('auth-password').addEventListener('keydown', (e) => {
+    // ПРИХОВАНО: email логін/реєстрація (для майбутньої ПК-версії)
+    document.getElementById('back-to-question-from-login')?.addEventListener('click', resetAuthForms);
+    document.getElementById('back-to-question-from-register')?.addEventListener('click', resetAuthForms);
+    document.getElementById('login-button')?.addEventListener('click', loginPlayer);
+    document.getElementById('auth-password')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loginPlayer();
     });
 
