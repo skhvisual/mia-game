@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v3.0';
+const GAME_VERSION = 'v3.1';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -2053,9 +2053,7 @@ class MainScene extends Phaser.Scene {
         this.scoreText.setShadow(2, 2, '#000', 4);
 
         // Відображення життів (на canvas) - в левом верхнем углу
-        this.livesText = this.add.text(20, 44, '', { fontSize: '32px', fill: '#FF3366', fontStyle: 'bold' });
-        this.livesText.setOrigin(0, 0);
-        this.livesText.setShadow(2, 2, '#000', 4);
+        this.livesText = null; // серця відображаються в HTML #lives-html
         this.updateLivesDisplay();
 
         this.superJumpText = this.add.text(20, 100, 'Суперстрибок: 0', { fontSize: '24px', fill: '#AAFF00', fontStyle: 'bold' });
@@ -2940,12 +2938,9 @@ class MainScene extends Phaser.Scene {
 
     updateLivesDisplay() {
         const hearts = ['💙', '💛', '💚'];
-        if (this.livesText) {
-            let heartsStr = '';
-            for (let i = 0; i < this.lives; i++) {
-                heartsStr += hearts[i] + ' ';
-            }
-            this.livesText.setText(heartsStr.trim());
+        const el = document.getElementById('lives-html');
+        if (el) {
+            el.textContent = hearts.slice(0, this.lives).join(' ');
         }
     }
 }
