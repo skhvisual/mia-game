@@ -416,6 +416,23 @@
         }
         #lives-display.active { display: block; }
 
+        #hit-message {
+            display: none;
+            position: fixed;
+            top: 32%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 150;
+            font-size: 30px;
+            font-weight: 800;
+            color: #FF3366;
+            text-align: center;
+            white-space: nowrap;
+            text-shadow: 0 0 4px #000, 0 0 8px #000, 2px 2px 3px #000;
+            pointer-events: none;
+        }
+        #hit-message.active { display: block; }
+
         /* ── ЕКРАНИ ── */
         #main-menu, #auth-screen, #start-screen, #leaderboard-overlay, #gameover-overlay {
             position: fixed;
@@ -607,6 +624,7 @@
     </div>
 
     <div id="lives-display"></div>
+    <div id="hit-message"></div>
     <div id="game-container"></div>
 
     <!-- Джойстик зліва + кнопка стрибка справа -->
@@ -620,7 +638,7 @@
             <div id="joystick-knob-r"></div>
         </div>
     </div>
-    <script src="game.js?v=3.4"></script>
+    <script src="game.js?v=3.5"></script>
     <script>
         // ── Діагностика: показуємо реальні параметри екрану та FPS ──
         (function () {

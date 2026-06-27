@@ -1,4 +1,4 @@
-const GAME_VERSION = 'v3.4';
+const GAME_VERSION = 'v3.5';
 const SUPABASE_URL = 'https://bszfmbxcojeyfbeovxsx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vPyWWlYyhKmsgU2ZEnSUcQ_gVNBIhHH';
 const isSupabaseConfigured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('ВСТАВЬ');
@@ -65,6 +65,7 @@ function showGameUI() {
     document.getElementById('current-player-name').textContent = currentPlayer?.name || 'Гравець';
     document.getElementById('touch-controls').classList.add('active');
     document.getElementById('lives-display').classList.add('active');
+    document.getElementById('hit-message').classList.remove('active');
     document.getElementById('gameover-overlay').style.display = 'none';
     window._miaMove = null;
     if (window.__tgBackButton) window.__tgBackButton.show();
@@ -2111,13 +2112,16 @@ class MainScene extends Phaser.Scene {
     update(time, delta) {
         if (this.gameOver) return;
 
-        // Коефіцієнт кадра (рух незалежний від FPS). Використовуємо delta від Phaser
-        // (rAF, узгоджений з рендером) і ЗГЛАДЖУЄМО ковзним середнім — інакше дрібні
-        // коливання delta кадр-у-кадр дають смикання предметів.
-        let rawF = Math.min((delta || 16.6667) / 16.6667, 3);
-        if (!this._smoothF) this._smoothF = rawF;
-        this._smoothF = this._smoothF * 0.85 + rawF * 0.15; // EMA
-        const f = this._smoothF;
+        // ФІКСОВАНИЙ КРОК. Будь-яке множення руху на змінну дельту дає смикання
+        // (delta кадр-у-кадр коливається 15–18мс). На 60Гц f=1 → ідеально плавно.
+        // Для не-60Гц екранів повільно адаптуємось через EMA, але майже завжди ≈1.
+        let rawF = (delta || 16.6667) / 16.6667;
+        // ігноруємо разові спайки (лаг-кадри), щоб не було ривка
+        if (rawF > 2) rawF = 2;
+        if (!this._smoothF) this._smoothF = 1;
+        this._smoothF = this._smoothF * 0.97 + rawF * 0.03; // дуже повільна адаптація
+        // якщо стабільно ~60Гц — тримаємо рівно 1 (без субпіксельних коливань)
+        const f = (this._smoothF > 0.9 && this._smoothF < 1.1) ? 1 : this._smoothF;
 
         this.gameSpeed += 0.00003 * f; // Более плавное ускорение
         let groundSpeed = this.gameSpeed * f;
@@ -2855,15 +2859,21 @@ class MainScene extends Phaser.Scene {
 
         if (this.lives > 0) {
             this.playBuffer('ohno', 0.7);
-            // Показуємо повідомлення про втрату життя (глубже, под иконками)
-            const msgText = this.add.text(this.GW / 2, this.GH * 0.25, '❤️ залишилось ' + this.lives, {
-                fontSize: '32px', fill: '#FF3366', fontStyle: 'bold', align: 'center',
-                stroke: '#000', strokeThickness: 6
-            }).setOrigin(0.5).setDepth(95);
+            // Повідомлення про втрату життя — в HTML поверх canvas (нічого не перекриває)
+            const hitMsg = document.getElementById('hit-message');
+            if (hitMsg) {
+                hitMsg.textContent = '❤️ залишилось ' + this.lives;
+                hitMsg.classList.add('active');
+            }
 
             this.physics.pause();
             this.gameOver = true;
             this.mia.anims.stop();
+
+            // Прибираємо всі предмети з екрану, щоб повідомлення нічого не перекривало
+            this.collectibles.clear(true, true);
+            this.superItems.clear(true, true);
+            this.rainItems.clear(true, true);
 
             // Ефект удару: миготіння Мії + зірочки навколо (замість червоної заливки)
             this.mia.clearTint();
@@ -2893,7 +2903,8 @@ class MainScene extends Phaser.Scene {
                     this.mia.clearTint();
                     this.mia.setAlpha(1);
                     this.physics.resume();
-                    msgText.destroy();
+                    const hm = document.getElementById('hit-message');
+                    if (hm) hm.classList.remove('active');
                     // Видаляємо всі перешкоди, щоб не було повторного зіткнення
                     this.obstacles.clear(true, true);
                     // Видаляємо Мрію з екрану, щоб не висіла
